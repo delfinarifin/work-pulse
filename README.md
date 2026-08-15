@@ -1,6 +1,10 @@
-# vibe-stack-supabase
+# Work Pulse
 
-Next.js 15 + Supabase starter for shipping vibe-coded apps fast. Clone, provision, build.
+Work Pulse auto-captures consultants' file-based activity, classifies it by work type using
+rule-based matching, rolls it into daily timesheet entries, and reports time spent by
+consultant, job role, and work type — viewable without login in v1.
+
+Built on `vibe-stack-supabase`, a Next.js 15 + Supabase starter.
 
 ## Stack
 
