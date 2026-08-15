@@ -1,75 +1,73 @@
-# WorkPulse — Data Model
+# Work Pulse — Data Model
 
 ## consultants
-| Field | Type |
-|-------|------|
-| id | uuid pk |
-| name | text not null |
-| email | text unique not null |
-| job_role | text not null (e.g., 'Tax Senior', 'Accounting Associate') |
-| user_id | uuid nullable |
-| created_at | timestamptz default now() |
+- id uuid PK
+- name text
+- email text unique
+- job_role_id uuid → job_roles.id (nullable)
+- team_id uuid → teams.id (nullable)
+- user_id uuid (nullable, for lock-down)
+- created_at timestamptz
 
-## clients
-| Field | Type |
-|-------|------|
-| id | uuid pk |
-| name | text not null |
-| company_name | text |
-| user_id | uuid nullable |
-| created_at | timestamptz default now() |
+## teams
+- id uuid PK
+- name text
+- user_id uuid (nullable)
+- created_at timestamptz
+
+## job_roles
+- id uuid PK
+- title text
+- user_id uuid (nullable)
+- created_at timestamptz
 
 ## work_types
-| Field | Type |
-|-------|------|
-| id | uuid pk |
-| name | text not null (e.g., 'Tax Filing', 'Bookkeeping') |
-| category | text not null ('tax' or 'accounting') |
-| created_at | timestamptz default now() |
+- id uuid PK
+- label text
+- category text
+- keywords text[] (used by rule-based classifier)
+- user_id uuid (nullable)
+- created_at timestamptz
 
-## activity_events
-| Field | Type |
-|-------|------|
-| id | uuid pk |
-| consultant_id | uuid not null → consultants |
-| client_id | uuid nullable → clients |
-| file_name | text not null |
-| file_path | text |
-| event_type | text not null ('open' / 'edit' / 'close') |
-| work_type_id | uuid nullable → work_types (AI-suggested) |
-| work_type_source | text (AI field source) |
-| work_type_confidence | numeric (AI field confidence) |
-| review_status | text default 'unreviewed' |
-| started_at | timestamptz not null |
-| ended_at | timestamptz |
-| created_at | timestamptz default now() |
+## activities
+- id uuid PK
+- consultant_id uuid → consultants.id
+- file_name text
+- application text (e.g. "Word", "Figma", "VS Code")
+- event_type text (open/edit/close)
+- started_at timestamptz
+- ended_at timestamptz
+- duration_seconds int
+- work_type_id uuid → work_types.id (AI-suggested)
+- work_type_value text — AI field: value = suggested label
+- work_type_source text — AI field: "rule-based" | "llm"
+- work_type_confidence numeric — AI field: 0.0–1.0
+- work_type_review_status text default 'unreviewed' — AI field
+- project_label text (nullable)
+- user_id uuid (nullable)
+- created_at timestamptz
 
 ## timesheet_entries
-| Field | Type |
-|-------|------|
-| id | uuid pk |
-| consultant_id | uuid not null → consultants |
-| client_id | uuid nullable → clients |
-| work_type_id | uuid not null → work_types |
-| date | date not null |
-| duration_minutes | int not null default 0 |
-| source | text not null default 'auto' ('auto' or 'manual') |
-| notes | text |
-| user_id | uuid nullable |
-| created_at | timestamptz default now() |
+- id uuid PK
+- consultant_id uuid → consultants.id
+- date date
+- work_type_id uuid → work_types.id
+- job_role_id uuid → job_roles.id (denormalized for reporting)
+- total_minutes int
+- source text default 'auto' — 'auto' | 'manual'
+- status text default 'draft' — 'draft' | 'approved' | 'edited'
+- user_id uuid (nullable)
+- created_at timestamptz
 
 ## audit_logs
-| Field | Type |
-|-------|------|
-| id | uuid pk |
-| user_id | uuid nullable |
-| action | text not null (e.g., 'entry.update', 'entry.create') |
-| entity | text not null |
-| entity_id | uuid |
-| details | jsonb |
-| created_at | timestamptz default now() |
+- id uuid PK
+- actor text (e.g. "demo-user", consultant name)
+- action text (e.g. "timesheet.approve", "activity.create")
+- target_type text
+- target_id uuid
+- metadata jsonb
+- user_id uuid (nullable)
+- created_at timestamptz
 
 ## RLS Notes
-- All tables have RLS enabled.
-- v1: permissive read/write policies (demo without login).
-- Lock-down: replace with `auth.uid() = user_id` owner-scoped policies.
+All tables: RLS enabled, permissive v1 policies (select/insert/update/delete for all). Lock-down sprint replaces with `auth.uid() = user_id` scoping.

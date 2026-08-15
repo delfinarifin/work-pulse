@@ -1,35 +1,37 @@
-# WorkPulse — Product Requirements
+# Work Pulse — PRD
 
 ## Problem
-Tax and accounting consultants spend hours manually logging timesheets. File-based work (spreadsheets, PDFs, tax software exports) is never captured automatically, leading to inaccurate billing, lost time, and poor resource planning.
+Consultants manually log time on spreadsheets, losing accuracy and hours. Work Pulse automatically captures file-based activity (documents, design files, code edits) and turns it into timesheet summaries by consultant, job role, and work type.
 
-## Target User
-- **Consultants** — work is auto-tracked; they review and submit timesheets.
-- **Managers** — review submitted time, monitor workload, approve entries.
-- **Admins** — configure work types, client lists, and access.
+## Target Users
+- **Consultants** — whose activity is auto-captured; they review/approve auto-generated timesheets.
+- **Managers** — view workload and time-spent reports across consultants and teams.
+- **Admins** — manage job roles, work types, and data-access settings.
 
 ## Core Objects
-- **Consultant** — name, email, job role (e.g., Tax Senior, Accounting Associate).
-- **Client** — the tax/accounting client the work is billed to.
-- **Work Type** — categorized activity (e.g., Tax Filing, Bookkeeping, Payroll, Audit Prep).
-- **Activity Event** — a raw file interaction (open/edit/close) with start/end timestamps.
-- **Timesheet Entry** — aggregated block of time per consultant + client + work type + date, marked auto or manual.
-- **Audit Log** — every meaningful action logged.
+- **Consultant** (name, email, job_role_id, team_id)
+- **Team** (name)
+- **JobRole** (title)
+- **WorkType** (label, category — e.g. "Design", "Documentation", "Development")
+- **Activity** (consultant_id, file_name, application, event_type, started_at, ended_at, duration_seconds, work_type_id, project_label) — AI-suggested work_type_id + classification confidence
+- **TimesheetEntry** (consultant_id, date, work_type_id, job_role_id, total_minutes, source="auto|manual", status)
+- **AuditLog** (actor, action, target_type, target_id, metadata)
 
-## MVP (v1)
-- [ ] Auto-capture file activity events (simulated file watcher writes events to DB)
-- [ ] Aggregate events into daily timesheet entries by consultant/client/work type
-- [ ] Edit and manually add timesheet entries
-- [ ] Monthly + yearly summary views by consultant, job role, and work type
-- [ ] Dashboard with productivity metrics (total hours, top work types, per-consultant breakdown)
-- [ ] All screens viewable without login (seeded demo data)
+## MVP (v1) — Checklist
+- [ ] Activity capture: log file-activity events (file name, app, start/end timestamp) via a manual "Log Activity" form (simulating the tracker agent)
+- [ ] Auto-classify each activity into a work type using rule-based matching (filename keyword → work type)
+- [ ] Roll up activities into daily timesheet entries grouped by work type
+- [ ] Dashboard: time spent by consultant, job role, and work type (daily/monthly)
+- [ ] Consultant timesheet review screen: approve or edit auto-generated entries
+- [ ] Manager report view: filter by consultant, date range, work type
+- [ ] Demo data seeded — app renders for anonymous visitors with no login wall
 
-## Non-goals (v1)
-- No mobile app
-- No real-time desktop agent installation (simulated capture via API/seed)
-- No approval workflow (managers view but approval is later)
-- No billing/invoicing integration
-- No per-user auth or data isolation (deferred to lock-down sprint)
+## Non-Goals (v1)
+- No mobile app.
+- No desktop agent/installer (activity logging is simulated via web form in v1).
+- No real-time file-system watcher (pluggable later).
+- No SSO / multi-tenant SaaS.
+- No payroll or billing calculations.
 
 ## Success Criteria
-A manager opens WorkPulse, sees a dashboard showing Consultant A spent 6.5 hours on Client X doing Tax Filing on Mar 12, drills into the monthly summary, and confirms the yearly roll-up by job role matches the sum of monthly entries — all data derived from auto-captured file events with zero manual entry.
+A consultant logs 5 simulated file activities through the web form; the system auto-classifies them into work types, rolls them into a daily timesheet entry, and the manager dashboard shows total minutes by consultant, job role, and work type for that day — all viewable without logging in.

@@ -1,40 +1,47 @@
-# WorkPulse — Intelligence Layer
+# Work Pulse — Intelligence Layer
 
 ## Messy Inputs
-- Raw file events arrive with inconsistent file names (e.g., `client_A_TaxReturn_2024.xlsx`, `IMG_3421.pdf`).
-- Events may overlap or have gaps (consultant switched files mid-task).
-- Work type is rarely labeled in the file name.
+Raw file activity: `"Q4_Financial_Report_v3.docx"` in Word, `"Homepage_Hero.fig"` in Figma, `"api-handler.ts"` in VS Code.
 
-## Auto-Structure Schema (per event)
+## Auto-Structure Schema
 ```json
 {
-  "file_name": "Acme_Corp_TaxReturn_2024.xlsx",
-  "inferred_client": "Acme Corp",
-  "inferred_work_type": "Tax Filing",
-  "work_type_confidence": 0.82,
-  "work_type_source": "filename-pattern-match",
-  "review_status": "unreviewed",
-  "duration_minutes": 47
+  "file_name": "Q4_Financial_Report_v3.docx",
+  "application": "Word",
+  "started_at": "2025-01-15T09:00:00Z",
+  "ended_at": "2025-01-15T09:45:00Z",
+  "duration_seconds": 2700,
+  "classified_work_type": "Documentation",
+  "classification_source": "rule-based",
+  "classification_confidence": 0.85,
+  "review_status": "unreviewed"
 }
 ```
 
-## Events to Track
-- File open → starts activity window
-- File edit → confirms active work, extends window
-- File close → ends activity window, triggers aggregation
-- Idle gap > 10 min → splits into separate entry
+## Events Tracked
+- `activity.logged` — new file activity recorded
+- `activity.classified` — work type assigned
+- `rollup.created` — daily timesheet entry generated
+- `timesheet.approved` — consultant approves entry
+- `timesheet.edited` — consultant changes work type or duration
 
-## Scoring Rules (rule-based v1)
-- **Duration calculation:** `ended_at - started_at`; merge events within 10-min gap on same file.
-- **Minimum entry:** discard sessions < 2 minutes (noise).
-- **Work-type match score:** filename keyword match → 0.8+; extension heuristic (.xlsx → accounting, .pdf → review) → 0.5; unknown → null, consultant must assign.
-- **Productivity score:** total focused minutes / scheduled minutes (v1: 8h baseline) per consultant per day.
+## Scoring / Classification Rules (rule-based, v1)
+| Keyword(s) in filename | Work Type | Confidence |
+|------------------------|-----------|------------|
+| report, doc, docx, pdf, spec | Documentation | 0.85 |
+| fig, design, mockup, wireframe | Design | 0.80 |
+| .ts, .py, .js, api, code, test | Development | 0.90 |
+| slide, pptx, deck | Presentation | 0.85 |
+| sheet, xlsx, csv, budget | Analysis | 0.80 |
+| (no match) | Unclassified | 0.30 |
+
+Roll-up confidence = min of constituent activity confidences.
 
 ## What Gets Ranked
-- Consultants by total tracked hours (weekly/monthly).
-- Work types by time share (where do consultants spend their time).
-- Clients by total consultant hours.
+- Work types by total time (most-spent-on first).
+- Consultants by productivity (total active minutes / day).
+- Activities by duration (longest first in review list).
 
 ## v1 vs Later
-- **v1:** Rule-based aggregation + filename heuristics + manual override.
-- **Later:** LLM-based work-type classification from file content/metadata; anomaly detection (unusually long sessions); productivity predictions.
+- **v1:** keyword rule engine, confidence scores, review status on every activity.
+- **Later:** LLM-based classification with context from project + application; auto-suggest project labels; anomaly detection (unusual activity spikes).

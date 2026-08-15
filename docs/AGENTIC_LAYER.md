@@ -1,35 +1,32 @@
-# WorkPulse — Agentic Layer
+# Work Pulse — Agentic Layer
 
-## Risk Levels
+## Draftable Actions (low risk — auto)
+- Classify activity → assign work_type_id + confidence. **Auto.**
+- Generate daily timesheet entry from activities. **Auto.**
+- Tag activity with project_label from filename. **Auto.**
 
-### Low (auto-execute)
-- **Aggregate events** — merge raw events into timesheet entries automatically.
-- **Suggest work type** — pre-fill `work_type_id` on events using rule-based heuristics.
-- **Tag idle time** — mark gaps > 10 min as idle.
+## Executable After Approval (medium risk)
+- Consultant edits auto-generated timesheet entry (change work type, adjust duration). **Light approval** — consultant clicks Approve or Edit.
+- Reclassify a batch of unclassified activities. **Light approval** — consultant reviews suggested work types.
 
-### Medium (draft → light approval)
-- **Create manual timesheet entry** — consultant drafts; saved immediately but flagged `source='manual'`.
-- **Update entry work type** — consultant corrects auto-suggested type; logged to audit.
-
-### High (approval required)
-- **Submit weekly timesheet** — consultant submits; manager must approve before it locks.
-- **Reopen approved timesheet** — manager action; requires reason in audit log.
-
-### Critical (human-only)
-- **Delete timesheet entry** — no auto-delete; requires explicit confirmation + audit log with full before-state.
-- **Delete consultant or client** — irreversible; admin-only.
+## Human-Only Actions (high/critical risk)
+- Delete an activity record. **Human-only.**
+- Delete a timesheet entry. **Human-only.**
+- Export data to external system. **Human-only.**
+- Modify job roles or work types. **Admin human-only.**
 
 ## Named Tools
-- `aggregate_events` — merges events into entries (low)
-- `suggest_work_type` — fills work_type_id on events (low)
-- `create_entry` — manual entry creation (medium)
-- `update_entry` — edit entry fields (medium)
-- `submit_timesheet` — lock entries for approval (high)
-- `delete_entry` — hard delete with audit (critical)
+| Tool | Risk | Trigger |
+|------|------|---------|
+| `classify_activity` | low | on activity create |
+| `rollup_daily` | low | on activity create / cron |
+| `flag_unclassified` | low | on rollup if confidence < 0.5 |
+| `edit_timesheet_entry` | medium | consultant review |
+| `delete_activity` | critical | admin UI only |
 
 ## Audit Log Fields
-- `action`, `entity`, `entity_id`, `details` (jsonb: before/after values), `user_id`, `created_at`
+Every action logs: actor, action, target_type, target_id, metadata (jsonb with before/after values), created_at.
 
 ## v1 vs Later
-- **v1:** Auto-aggregation + manual entry CRUD + audit logging.
-- **Later:** Submit/approve workflow, AI work-type suggestions with confidence thresholds, automated weekly reports.
+- **v1:** `classify_activity` + `rollup_daily` run automatically. Consultant review is manual (no agent).
+- **Later:** agent drafts timesheet corrections for low-confidence entries; agent suggests weekly time allocation; agent auto-submits approved timesheets.
