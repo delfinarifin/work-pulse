@@ -1,11 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import type { TimesheetEntryWithJoins } from "@/lib/types";
-import { listActivitiesForConsultantOnDate } from "@/lib/data/activities";
+import { listActivityEventsForConsultantOnDate } from "@/lib/data/activity-events";
 import { writeAuditLog } from "@/lib/data/audit-logs";
-import { rollupActivities } from "@/lib/logic/rollup";
+import { aggregateActivityEvents } from "@/lib/logic/aggregation";
 
 const ENTRY_SELECT =
-  "*, consultant:consultants(id, name), work_type:work_types(id, label, category), job_role:job_roles(id, title)";
+  "*, consultant:consultants(id, name, job_role), client:clients(id, name), work_type:work_types(id, name, category)";
 
 export async function listTimesheetEntries(): Promise<
   TimesheetEntryWithJoins[]
@@ -21,111 +21,109 @@ export async function listTimesheetEntries(): Promise<
   return (data ?? []) as unknown as TimesheetEntryWithJoins[];
 }
 
-// Recomputes today's-day rollup for one consultant from their activities and
-// reconciles it against existing timesheet_entries: inserts new draft rows,
-// refreshes totals on existing drafts, and never touches approved/edited rows.
-export async function runRollupForConsultantDate(
+// Recomputes today's-day aggregation for one consultant from their activity
+// events and reconciles it against existing timesheet_entries: inserts new
+// auto rows, refreshes durations on existing auto rows, and never touches
+// manual entries (those are the consultant's own record, not auto-derived).
+export async function runAggregationForConsultantDate(
   consultantId: string,
   date: string,
 ): Promise<void> {
   const supabase = await createClient();
 
-  const [activities, consultantRes, existingRes] = await Promise.all([
-    listActivitiesForConsultantOnDate(consultantId, date),
-    supabase
-      .from("consultants")
-      .select("job_role_id")
-      .eq("id", consultantId)
-      .single(),
+  const [events, existingRes] = await Promise.all([
+    listActivityEventsForConsultantOnDate(consultantId, date),
     supabase
       .from("timesheet_entries")
-      .select("id, work_type_id, status")
+      .select("id, client_id, work_type_id, source")
       .eq("consultant_id", consultantId)
       .eq("date", date),
   ]);
 
-  if (consultantRes.error) throw consultantRes.error;
   if (existingRes.error) throw existingRes.error;
 
-  const jobRoleId = consultantRes.data?.job_role_id ?? null;
-  const existingByWorkType = new Map(
-    (existingRes.data ?? []).map((e) => [e.work_type_id ?? "unclassified", e]),
+  const existingByKey = new Map(
+    (existingRes.data ?? []).map((e) => [
+      `${e.client_id ?? "none"}:${e.work_type_id ?? "unclassified"}`,
+      e,
+    ]),
   );
 
-  const groups = rollupActivities(activities, consultantId, date);
+  const groups = aggregateActivityEvents(events, consultantId, date);
   let createdCount = 0;
 
   for (const group of groups) {
-    const key = group.work_type_id ?? "unclassified";
-    const existing = existingByWorkType.get(key);
+    // timesheet_entries.work_type_id is NOT NULL — unclassified events stay
+    // visible on the Activity Log for the consultant to reclassify, but
+    // don't roll into a timesheet entry until they have a work type.
+    if (!group.work_type_id) continue;
+
+    const key = `${group.client_id ?? "none"}:${group.work_type_id}`;
+    const existing = existingByKey.get(key);
 
     if (!existing) {
       const { error } = await supabase.from("timesheet_entries").insert({
         consultant_id: group.consultant_id,
-        date: group.date,
+        client_id: group.client_id,
         work_type_id: group.work_type_id,
-        job_role_id: jobRoleId,
-        total_minutes: group.total_minutes,
+        date: group.date,
+        duration_minutes: group.duration_minutes,
         source: "auto",
-        status: "draft",
       });
       if (error) throw error;
       createdCount += 1;
-    } else if (existing.status === "draft") {
+    } else if (existing.source === "auto") {
       const { error } = await supabase
         .from("timesheet_entries")
-        .update({ total_minutes: group.total_minutes })
+        .update({ duration_minutes: group.duration_minutes })
         .eq("id", existing.id);
       if (error) throw error;
     }
-    // approved/edited entries are left untouched — already reviewed.
+    // manual entries are left untouched — they're not auto-derived.
   }
 
   if (createdCount > 0) {
     await writeAuditLog({
-      actor: "system",
-      action: "rollup.created",
-      target_type: "timesheet_entries",
-      target_id: null,
-      metadata: { consultant_id: consultantId, date, count: createdCount },
+      action: "entry.create",
+      entity: "timesheet_entries",
+      entity_id: null,
+      details: { consultant_id: consultantId, date, count: createdCount, source: "auto" },
     });
   }
 }
 
-export async function approveTimesheetEntry(id: string): Promise<void> {
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("timesheet_entries")
-    .update({ status: "approved" })
-    .eq("id", id);
-  if (error) throw error;
-
-  await writeAuditLog({
-    actor: "demo-user",
-    action: "timesheet.approved",
-    target_type: "timesheet_entries",
-    target_id: id,
-    metadata: {},
-  });
-}
-
 export async function editTimesheetEntry(
   id: string,
-  changes: { work_type_id?: string; total_minutes?: number },
-  before: { work_type_id: string | null; total_minutes: number },
+  changes: { work_type_id?: string; duration_minutes?: number; notes?: string | null },
+  before: { work_type_id: string | null; duration_minutes: number; notes: string | null },
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
     .from("timesheet_entries")
-    .update({ ...changes, status: "edited" })
+    .update(changes)
     .eq("id", id);
   if (error) throw error;
 
   await writeAuditLog({
-    actor: "demo-user",
-    action: "timesheet.edited",
-    target_type: "timesheet_entries",
-    target_id: id,
-    metadata: { before, after: changes },
+    action: "entry.update",
+    entity: "timesheet_entries",
+    entity_id: id,
+    details: { before, after: changes },
+  });
+}
+
+export async function deleteTimesheetEntry(
+  id: string,
+  before: Record<string, unknown>,
+): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("timesheet_entries").delete().eq("id", id);
+  if (error) throw error;
+
+  await writeAuditLog({
+    action: "entry.delete",
+    entity: "timesheet_entries",
+    entity_id: id,
+    details: { before },
   });
 }

@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { approveEntryAction, editEntryAction } from "@/app/timesheets/actions";
+import { deleteEntryAction, editEntryAction } from "@/app/timesheets/actions";
 import type { TimesheetEntryWithJoins, WorkType } from "@/lib/types";
 
-const STATUS_STYLES: Record<string, string> = {
-  draft: "bg-neutral-100 text-neutral-600",
-  approved: "bg-emerald-50 text-emerald-700",
-  edited: "bg-amber-50 text-amber-700",
+const SOURCE_STYLES: Record<string, string> = {
+  auto: "bg-neutral-100 text-neutral-600",
+  manual: "bg-amber-50 text-amber-700",
 };
 
 export default function TimesheetTable({
@@ -27,9 +26,10 @@ export default function TimesheetTable({
             <th className="px-4 py-2 font-medium">Date</th>
             <th className="px-4 py-2 font-medium">Consultant</th>
             <th className="px-4 py-2 font-medium">Job Role</th>
+            <th className="px-4 py-2 font-medium">Client</th>
             <th className="px-4 py-2 font-medium">Work Type</th>
             <th className="px-4 py-2 font-medium">Minutes</th>
-            <th className="px-4 py-2 font-medium">Status</th>
+            <th className="px-4 py-2 font-medium">Source</th>
             <th className="px-4 py-2 font-medium">Actions</th>
           </tr>
         </thead>
@@ -41,19 +41,22 @@ export default function TimesheetTable({
                 {entry.consultant?.name ?? "—"}
               </td>
               <td className="px-4 py-2.5 text-neutral-600">
-                {entry.job_role?.title ?? "—"}
+                {entry.consultant?.job_role ?? "—"}
               </td>
               <td className="px-4 py-2.5 text-neutral-600">
-                {entry.work_type?.label ?? "Unclassified"}
+                {entry.client?.name ?? "—"}
               </td>
               <td className="px-4 py-2.5 text-neutral-600">
-                {entry.total_minutes}m
+                {entry.work_type?.name ?? "Unclassified"}
+              </td>
+              <td className="px-4 py-2.5 text-neutral-600">
+                {entry.duration_minutes}m
               </td>
               <td className="px-4 py-2.5">
                 <span
-                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[entry.status]}`}
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${SOURCE_STYLES[entry.source]}`}
                 >
-                  {entry.status}
+                  {entry.source}
                 </span>
               </td>
               <td className="px-4 py-2.5">
@@ -73,16 +76,23 @@ export default function TimesheetTable({
                     >
                       {workTypes.map((wt) => (
                         <option key={wt.id} value={wt.id}>
-                          {wt.label}
+                          {wt.name}
                         </option>
                       ))}
                     </select>
                     <input
                       type="number"
-                      name="total_minutes"
+                      name="duration_minutes"
                       min={0}
-                      defaultValue={entry.total_minutes}
+                      defaultValue={entry.duration_minutes}
                       className="w-16 rounded border border-neutral-300 px-1.5 py-1 text-xs"
+                    />
+                    <input
+                      type="text"
+                      name="notes"
+                      placeholder="Notes"
+                      defaultValue={entry.notes ?? ""}
+                      className="w-28 rounded border border-neutral-300 px-1.5 py-1 text-xs"
                     />
                     <button
                       type="submit"
@@ -100,17 +110,6 @@ export default function TimesheetTable({
                   </form>
                 ) : (
                   <div className="flex items-center gap-2">
-                    {entry.status !== "approved" && (
-                      <form action={approveEntryAction}>
-                        <input type="hidden" name="id" value={entry.id} />
-                        <button
-                          type="submit"
-                          className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium hover:bg-neutral-50"
-                        >
-                          Approve
-                        </button>
-                      </form>
-                    )}
                     <button
                       type="button"
                       onClick={() => setEditingId(entry.id)}
@@ -118,6 +117,20 @@ export default function TimesheetTable({
                     >
                       Edit
                     </button>
+                    <form
+                      action={async (formData) => {
+                        if (!window.confirm("Delete this entry?")) return;
+                        await deleteEntryAction(formData);
+                      }}
+                    >
+                      <input type="hidden" name="id" value={entry.id} />
+                      <button
+                        type="submit"
+                        className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+                    </form>
                   </div>
                 )}
               </td>

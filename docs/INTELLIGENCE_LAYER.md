@@ -1,47 +1,38 @@
 # Work Pulse — Intelligence Layer
 
 ## Messy Inputs
-Raw file activity: `"SPT_Tahunan_PT_ABC_2024.docx"` in Word, `"Bank_Reconciliation_Nov2024.xlsx"` in Excel, `"Audit_Workpaper_Q4.pdf"` in Adobe Acrobat.
+- Raw file events arrive with inconsistent file names (e.g., `client_A_TaxReturn_2024.xlsx`, `IMG_3421.pdf`).
+- Events may overlap or have gaps (consultant switched files mid-task).
+- Work type is rarely labeled in the file name.
 
-## Auto-Structure Schema
+## Auto-Structure Schema (per event)
 ```json
 {
-  "file_name": "SPT_Tahunan_PT_ABC_2024.docx",
-  "application": "Word",
-  "started_at": "2025-01-15T09:00:00Z",
-  "ended_at": "2025-01-15T09:45:00Z",
-  "duration_seconds": 2700,
-  "classified_work_type": "Tax Preparation",
-  "classification_source": "rule-based",
-  "classification_confidence": 0.85,
-  "review_status": "unreviewed"
+  "file_name": "Acme_Corp_TaxReturn_2024.xlsx",
+  "inferred_client": "Acme Corp",
+  "inferred_work_type": "Tax Filing",
+  "work_type_confidence": 0.82,
+  "work_type_source": "filename-pattern-match",
+  "review_status": "unreviewed",
+  "duration_minutes": 47
 }
 ```
 
-## Events Tracked
-- `activity.logged` — new file activity recorded
-- `activity.classified` — work type assigned
-- `rollup.created` — daily timesheet entry generated
-- `timesheet.approved` — consultant approves entry
-- `timesheet.edited` — consultant changes work type or duration
+## Events to Track
+- File open / edit / close — `event_type` on `activity_events` (v1's "Log Activity" form always writes `edit`, simulating a completed work block; open/close are reserved for the later real file-watcher agent).
+- Idle gap / session merging is a **later** capability — not implemented in v1 (see below).
 
-## Scoring / Classification Rules (rule-based, v1)
-| Keyword(s) in filename | Work Type | Confidence |
-|------------------------|-----------|------------|
-| tax, spt, pph, ppn, faktur, return, 1040, 1120, w2, 1099 | Tax Preparation | 0.85 |
-| ledger, journal, jurnal, reconciliation, recon, gl, coa, buku_besar | Bookkeeping | 0.80 |
-| audit, workpaper, wp, fieldwork, engagement, sampling | Audit | 0.90 |
-| memo, advisory, planning, opinion, strategy, structuring | Advisory | 0.85 |
-| financial_statement, balance_sheet, income_statement, cashflow, budget, forecast, laporan, report | Financial Reporting | 0.80 |
-| (no match) | Unclassified | 0.30 |
-
-Roll-up confidence = min of constituent activity confidences.
+## Scoring Rules (rule-based v1, `lib/logic/classify.ts` + `lib/logic/aggregation.ts`)
+- **Duration calculation:** `ended_at - started_at` in minutes, per event; events without an `ended_at` contribute no duration.
+- **Aggregation:** `aggregateActivityEvents` sums duration per consultant + client + work_type + date into one `timesheet_entries` row.
+- **Work-type match:** filename keyword match against an in-code table (work_types has no `keywords` column in v2) — first match wins, in priority order: Tax Filing > Tax Planning > Bookkeeping > Payroll > Audit Prep. Confidence 0.80–0.90 per work type.
+- **No match:** `work_type_id` = null, confidence 0.30, `review_status` = `unreviewed` — consultant assigns manually on Timesheets.
 
 ## What Gets Ranked
-- Work types by total time (most-spent-on first).
-- Consultants by productivity (total active minutes / day).
-- Activities by duration (longest first in review list).
+- Consultants by total tracked hours (weekly/monthly).
+- Work types by time share (where do consultants spend their time).
+- Clients by total consultant hours.
 
 ## v1 vs Later
-- **v1:** keyword rule engine, confidence scores, review status on every activity.
-- **Later:** LLM-based classification with context from project + application; auto-suggest project labels; anomaly detection (unusual activity spikes).
+- **v1:** Rule-based aggregation + filename heuristics + manual override.
+- **Later:** LLM-based work-type classification from file content/metadata; anomaly detection (unusually long sessions); productivity predictions.

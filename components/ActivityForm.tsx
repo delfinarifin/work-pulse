@@ -2,23 +2,16 @@
 
 import { useActionState } from "react";
 import { logActivity, type LogActivityState } from "@/app/activities/new/actions";
-import type { Consultant } from "@/lib/types";
+import type { Client, Consultant } from "@/lib/types";
 
 const initialState: LogActivityState = { error: null };
 
-const APPLICATIONS = [
-  "Excel",
-  "Word",
-  "Outlook",
-  "QuickBooks",
-  "Adobe Acrobat",
-  "Other",
-];
-
 export default function ActivityForm({
   consultants,
+  clients,
 }: {
   consultants: Consultant[];
+  clients: Client[];
 }) {
   const [state, formAction, pending] = useActionState(
     logActivity,
@@ -59,6 +52,25 @@ export default function ActivityForm({
       </div>
 
       <div className="space-y-1">
+        <label htmlFor="client_id" className="text-sm font-medium">
+          Client <span className="text-neutral-400">(optional)</span>
+        </label>
+        <select
+          id="client_id"
+          name="client_id"
+          defaultValue=""
+          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        >
+          <option value="">No client</option>
+          {clients.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
         <label htmlFor="file_name" className="text-sm font-medium">
           File name
         </label>
@@ -67,31 +79,9 @@ export default function ActivityForm({
           name="file_name"
           type="text"
           required
-          placeholder="Client_ABC_Tax_Return_2024.docx"
+          placeholder="Client_ABC_Tax_Return_2024.xlsx"
           className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
         />
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="application" className="text-sm font-medium">
-          Application
-        </label>
-        <select
-          id="application"
-          name="application"
-          required
-          defaultValue=""
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-        >
-          <option value="" disabled>
-            Select an application
-          </option>
-          {APPLICATIONS.map((app) => (
-            <option key={app} value={app}>
-              {app}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -119,19 +109,6 @@ export default function ActivityForm({
             className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
           />
         </div>
-      </div>
-
-      <div className="space-y-1">
-        <label htmlFor="project_label" className="text-sm font-medium">
-          Project label <span className="text-neutral-400">(optional)</span>
-        </label>
-        <input
-          id="project_label"
-          name="project_label"
-          type="text"
-          placeholder="Acme Corp"
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-        />
       </div>
 
       <button

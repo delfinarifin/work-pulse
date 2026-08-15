@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { WorkType } from "@/lib/types";
 
-// Insertion order in the migration is the classification priority order
-// (Tax Preparation > Bookkeeping > Audit > Advisory > Financial Reporting > Unclassified).
 export async function listWorkTypes(): Promise<WorkType[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

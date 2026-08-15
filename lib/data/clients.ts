@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import type { JobRole } from "@/lib/types";
+import type { Client } from "@/lib/types";
 
-export async function listJobRoles(): Promise<JobRole[]> {
+export async function listClients(): Promise<Client[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("job_roles")
+    .from("clients")
     .select("*")
-    .order("title", { ascending: true });
+    .order("name", { ascending: true });
 
   if (error) throw error;
   return data ?? [];

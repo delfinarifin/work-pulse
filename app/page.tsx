@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { listActivities } from "@/lib/data/activities";
+import { listActivityEvents } from "@/lib/data/activity-events";
 
 export default async function DashboardPage() {
-  const activities = await listActivities(200);
+  const events = await listActivityEvents(200);
 
-  if (activities.length === 0) {
+  if (events.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-neutral-300 p-10 text-center space-y-3">
         <p className="text-neutral-500">
@@ -20,19 +20,18 @@ export default async function DashboardPage() {
     );
   }
 
-  const totalMinutes = Math.round(
-    activities.reduce((sum, a) => sum + a.duration_seconds, 0) / 60,
-  );
-  const consultantCount = new Set(activities.map((a) => a.consultant_id)).size;
-
+  let totalMinutes = 0;
   const byWorkType = new Map<string, number>();
-  for (const a of activities) {
-    const label = a.work_type_value ?? "Unclassified";
-    byWorkType.set(
-      label,
-      (byWorkType.get(label) ?? 0) + Math.round(a.duration_seconds / 60),
+  for (const event of events) {
+    if (!event.ended_at) continue;
+    const minutes = Math.round(
+      (new Date(event.ended_at).getTime() - new Date(event.started_at).getTime()) / 60000,
     );
+    totalMinutes += minutes;
+    const label = event.work_type?.name ?? "Unclassified";
+    byWorkType.set(label, (byWorkType.get(label) ?? 0) + minutes);
   }
+  const consultantCount = new Set(events.map((e) => e.consultant_id)).size;
 
   return (
     <div className="space-y-8">
@@ -46,7 +45,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard label="Total minutes logged" value={totalMinutes} />
         <StatCard label="Consultants active" value={consultantCount} />
-        <StatCard label="Activities logged" value={activities.length} />
+        <StatCard label="Activities logged" value={events.length} />
       </div>
 
       <div>
@@ -65,7 +64,7 @@ export default async function DashboardPage() {
                   <div
                     className="h-full bg-neutral-900"
                     style={{
-                      width: `${Math.min(100, (minutes / totalMinutes) * 100)}%`,
+                      width: `${totalMinutes === 0 ? 0 : Math.min(100, (minutes / totalMinutes) * 100)}%`,
                     }}
                   />
                 </div>

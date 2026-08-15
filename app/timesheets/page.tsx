@@ -14,8 +14,8 @@ export default async function TimesheetsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">My Timesheets</h1>
         <p className="text-sm text-neutral-500">
-          Daily entries rolled up from logged activities. Approve or edit
-          each entry.
+          Daily entries aggregated from logged activity. Edit or delete each
+          entry.
         </p>
       </div>
 

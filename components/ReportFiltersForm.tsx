@@ -57,7 +57,7 @@ export default function ReportFiltersForm({
           <option value="">All work types</option>
           {workTypes.map((wt) => (
             <option key={wt.id} value={wt.id}>
-              {wt.label}
+              {wt.name}
             </option>
           ))}
         </select>

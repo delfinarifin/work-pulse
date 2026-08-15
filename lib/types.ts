@@ -1,79 +1,70 @@
 export type Consultant = {
   id: string;
   name: string;
-  email: string | null;
-  job_role_id: string | null;
-  team_id: string | null;
+  email: string;
+  job_role: string;
   created_at: string;
 };
 
-export type Team = {
+export type Client = {
   id: string;
   name: string;
-  created_at: string;
-};
-
-export type JobRole = {
-  id: string;
-  title: string;
+  company_name: string | null;
   created_at: string;
 };
 
 export type WorkType = {
   id: string;
-  label: string;
-  category: string;
-  keywords: string[];
+  name: string;
+  category: "tax" | "accounting";
   created_at: string;
 };
 
-export type Activity = {
+export type ActivityEvent = {
   id: string;
   consultant_id: string;
+  client_id: string | null;
   file_name: string;
-  application: string;
-  event_type: string;
-  started_at: string;
-  ended_at: string;
-  duration_seconds: number;
+  file_path: string | null;
+  event_type: "open" | "edit" | "close";
   work_type_id: string | null;
-  work_type_value: string | null;
   work_type_source: string | null;
   work_type_confidence: number | null;
-  work_type_review_status: string;
-  project_label: string | null;
+  review_status: string;
+  started_at: string;
+  ended_at: string | null;
   created_at: string;
 };
 
-export type ActivityWithJoins = Activity & {
+export type ActivityEventWithJoins = ActivityEvent & {
   consultant: { id: string; name: string } | null;
-  work_type: { id: string; label: string; category: string } | null;
+  client: { id: string; name: string } | null;
+  work_type: { id: string; name: string; category: string } | null;
 };
 
 export type TimesheetEntry = {
   id: string;
   consultant_id: string;
-  date: string;
+  client_id: string | null;
   work_type_id: string | null;
-  job_role_id: string | null;
-  total_minutes: number;
+  date: string;
+  duration_minutes: number;
   source: "auto" | "manual";
-  status: "draft" | "approved" | "edited";
+  notes: string | null;
   created_at: string;
 };
 
 export type TimesheetEntryWithJoins = TimesheetEntry & {
-  consultant: { id: string; name: string } | null;
-  work_type: { id: string; label: string; category: string } | null;
-  job_role: { id: string; title: string } | null;
+  consultant: { id: string; name: string; job_role: string } | null;
+  client: { id: string; name: string } | null;
+  work_type: { id: string; name: string; category: string } | null;
 };
 
 export type AuditLog = {
   id: string;
-  actor: string;
   action: string;
-  target_type: string;
-  target_id: string | null;
-  metadata: Record<string, unknown> | null;
+  entity: string;
+  entity_id: string | null;
+  details: Record<string, unknown> | null;
   created_at: string;
 };

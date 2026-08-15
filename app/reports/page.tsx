@@ -27,7 +27,7 @@ export default async function ReportsPage({
     listWorkTypes(),
   ]);
 
-  const totalMinutes = rows.reduce((sum, r) => sum + r.total_minutes, 0);
+  const totalMinutes = rows.reduce((sum, r) => sum + r.duration_minutes, 0);
 
   const byConsultant = new Map<string, { name: string; minutes: number }>();
   const byWorkType = new Map<string, number>();
@@ -38,16 +38,16 @@ export default async function ReportsPage({
       name: row.consultant_name,
       minutes: 0,
     };
-    c.minutes += row.total_minutes;
+    c.minutes += row.duration_minutes;
     byConsultant.set(row.consultant_id, c);
 
     byWorkType.set(
-      row.work_type_label,
-      (byWorkType.get(row.work_type_label) ?? 0) + row.total_minutes,
+      row.work_type_name,
+      (byWorkType.get(row.work_type_name) ?? 0) + row.duration_minutes,
     );
 
-    const role = row.job_role_title ?? "Unassigned";
-    byJobRole.set(role, (byJobRole.get(role) ?? 0) + row.total_minutes);
+    const role = row.job_role ?? "Unassigned";
+    byJobRole.set(role, (byJobRole.get(role) ?? 0) + row.duration_minutes);
   }
 
   return (
@@ -103,9 +103,10 @@ export default async function ReportsPage({
                   <th className="px-4 py-2 font-medium">Date</th>
                   <th className="px-4 py-2 font-medium">Consultant</th>
                   <th className="px-4 py-2 font-medium">Job Role</th>
+                  <th className="px-4 py-2 font-medium">Client</th>
                   <th className="px-4 py-2 font-medium">Work Type</th>
                   <th className="px-4 py-2 font-medium">Minutes</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Source</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
@@ -116,16 +117,19 @@ export default async function ReportsPage({
                       {row.consultant_name}
                     </td>
                     <td className="px-4 py-2.5 text-neutral-600">
-                      {row.job_role_title ?? "—"}
+                      {row.job_role ?? "—"}
                     </td>
                     <td className="px-4 py-2.5 text-neutral-600">
-                      {row.work_type_label}
+                      {row.client_name ?? "—"}
                     </td>
                     <td className="px-4 py-2.5 text-neutral-600">
-                      {row.total_minutes}m
+                      {row.work_type_name}
+                    </td>
+                    <td className="px-4 py-2.5 text-neutral-600">
+                      {row.duration_minutes}m
                     </td>
                     <td className="px-4 py-2.5 text-neutral-600 capitalize">
-                      {row.status}
+                      {row.source}
                     </td>
                   </tr>
                 ))}

@@ -1,33 +1,36 @@
 # Work Pulse — Test Plan
 
 ## v1 Success Scenario (manual)
-1. Open app (no login) → dashboard renders with seeded demo data.
-2. Click **Log Activity** in sidebar.
-3. Fill form: file name `Budget_Forecast_2025.xlsx`, application `Excel`, start 09:00, end 10:30.
-4. Submit → redirect to activity list → new activity shows work type `Financial Reporting`, confidence `0.80`.
-5. Log 2 more activities: `Bank_Reconciliation_Nov.xlsx` (Excel, 30 min) → `Bookkeeping`; `Audit_Workpaper_Q4.pdf` (Adobe Acrobat, 45 min) → `Audit`.
-6. Go to **Timesheets** → see 3 daily entries (one per work type) for today.
-7. Click **Approve** on the Bookkeeping entry → status changes to `approved`; audit log written.
-8. Click **Edit** on the Audit entry → change duration to 60 min → save → status = `edited`.
-9. Go to **Dashboard** → bar chart shows minutes by work type; table shows per-consultant totals.
-10. Go to **Reports** → filter by today → see breakdown by consultant, job role, work type.
+1. Open app (no login) → Dashboard loads showing seeded consultant hours and work-type breakdown.
+2. Navigate to **Activity Log** → verify seeded file events with file names, clients, timestamps, consultants.
+3. Click **Log Activity** → fill form: consultant, client, file name `Acme_TaxReturn_2025.xlsx`, start/end time.
+4. Submit → activity event is inserted, auto-classified (`Tax Filing`), and aggregated into a `timesheet_entries` row for that consultant + client + date in the same action.
+5. Navigate to **Timesheets** → new entry appears with correct duration and `auto` source.
+6. Navigate to **Reports** → totals update for that consultant, job role, and work type.
+7. Edit an entry's work type/duration/notes on Timesheets → source stays visible, audit log records the change.
+8. Delete an entry → confirm prompt, row removed, audit log records the before-state.
 
 ## Empty State
-- Clear all activities → dashboard shows: "No activity data yet. Log your first activity to get started." with a button to `/activities/new`.
+- Clear all activity_events/timesheet_entries → Dashboard and Activity Log show "No activity data yet. Log your first activity to get started." with a button to `/activities/new`.
 - Timesheets page with no entries: "No timesheet entries. Log activities to generate your daily timesheet."
 - Reports with no data: "No results for the selected filters. Try a wider date range."
 
 ## Error Cases
 - Submit activity form with end < start → inline error: "End time must be after start time."
 - Submit with empty file name → inline error: "File name is required."
-- Network failure on submit → toast: "Failed to save activity. Check your connection and try again."
-- Rollup with zero activities for the day → no timesheet entries created (no empty rows).
+- Submit with no consultant selected → inline error: "Consultant is required."
+- Network/DB failure on submit → inline error: "Failed to save activity. Check your connection and try again."
+- Aggregation for a day with zero activity events → no timesheet entries created (no empty rows).
 
 ## Loading States
-- Activity list → skeleton rows for 2 seconds (simulated delay).
-- Dashboard charts → spinner with "Loading time data…".
-- Timesheet table → pulsing row placeholders.
+- Activity list / dashboard / timesheets / reports → skeleton rows or spinner while data loads (`loading.tsx` per route).
 
 ## Classification Edge Cases
-- Filename with no matching keywords → work type = `Unclassified`, confidence = 0.30, review_status = `unreviewed`.
-- Filename matching multiple keyword sets → first match wins (Tax Preparation > Bookkeeping > Audit priority).
+- Filename with no matching keywords → `work_type_id` = null, displayed as `Unclassified`, confidence = 0.30, `review_status` = `unreviewed`.
+- Filename matching multiple keyword sets → first match wins (Tax Filing > Tax Planning > Bookkeeping > Payroll > Audit Prep priority).
+
+## Audit
+- Logging an activity writes `audit_logs` with `action='activity.classified'`.
+- Auto-aggregation creating new entries writes `audit_logs` with `action='entry.create'`.
+- Editing an entry (work type, duration, or notes) writes `audit_logs` with `action='entry.update'` and before/after values.
+- Deleting an entry writes `audit_logs` with `action='entry.delete'` and the full before-state.

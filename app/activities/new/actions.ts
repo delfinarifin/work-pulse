@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { insertActivity } from "@/lib/data/activities";
+import { insertActivityEvent } from "@/lib/data/activity-events";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 import { listWorkTypes } from "@/lib/data/work-types";
-import { runRollupForConsultantDate } from "@/lib/data/timesheets";
+import { runAggregationForConsultantDate } from "@/lib/data/timesheets";
 import { classifyActivity } from "@/lib/logic/classify";
 
 export type LogActivityState = {
@@ -16,20 +16,16 @@ export async function logActivity(
   formData: FormData,
 ): Promise<LogActivityState> {
   const consultant_id = String(formData.get("consultant_id") ?? "");
+  const client_id = String(formData.get("client_id") ?? "").trim();
   const file_name = String(formData.get("file_name") ?? "").trim();
-  const application = String(formData.get("application") ?? "").trim();
   const started_at = String(formData.get("started_at") ?? "");
   const ended_at = String(formData.get("ended_at") ?? "");
-  const project_label = String(formData.get("project_label") ?? "").trim();
 
   if (!consultant_id) {
     return { error: "Consultant is required." };
   }
   if (!file_name) {
     return { error: "File name is required." };
-  }
-  if (!application) {
-    return { error: "Application is required." };
   }
   if (!started_at || !ended_at) {
     return { error: "Start and end time are required." };
@@ -44,42 +40,35 @@ export async function logActivity(
     return { error: "End time must be after start time." };
   }
 
-  const duration_seconds = Math.round(
-    (endDate.getTime() - startDate.getTime()) / 1000,
-  );
-
-  let activity;
+  let event;
   try {
     const workTypes = await listWorkTypes();
     const classification = classifyActivity(file_name, workTypes);
 
-    activity = await insertActivity({
+    event = await insertActivityEvent({
       consultant_id,
+      client_id: client_id || null,
       file_name,
-      application,
+      event_type: "edit",
       started_at: startDate.toISOString(),
       ended_at: endDate.toISOString(),
-      duration_seconds,
       work_type_id: classification.work_type_id,
-      work_type_value: classification.work_type_value,
       work_type_source: classification.work_type_source,
       work_type_confidence: classification.work_type_confidence,
-      project_label: project_label || null,
     });
 
     await writeAuditLog({
-      actor: "demo-user",
       action: "activity.classified",
-      target_type: "activities",
-      target_id: activity.id,
-      metadata: {
+      entity: "activity_events",
+      entity_id: event.id,
+      details: {
         file_name,
-        work_type: classification.work_type_value,
+        work_type: classification.work_type_name ?? "Unclassified",
         confidence: classification.work_type_confidence,
       },
     });
 
-    await runRollupForConsultantDate(
+    await runAggregationForConsultantDate(
       consultant_id,
       startDate.toISOString().slice(0, 10),
     );
