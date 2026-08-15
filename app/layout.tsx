@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Sidebar from "@/components/Sidebar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "vibe-stack-supabase",
-  description: "Next.js + Supabase starter",
+  title: "Work Pulse",
+  description: "Auto-captured consultant time tracking and reporting.",
 };
 
 export default function RootLayout({
@@ -13,7 +14,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased">
+        <div className="md:flex md:min-h-screen">
+          <Sidebar />
+          <main className="flex-1 min-w-0 p-4 md:p-8">{children}</main>
+        </div>
+      </body>
     </html>
   );
 }
