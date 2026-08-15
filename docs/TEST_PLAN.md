@@ -1,33 +1,31 @@
-# Work Pulse — Test Plan
+# WorkPulse — Test Plan
 
 ## v1 Success Scenario (manual)
-1. Open app (no login) → dashboard renders with seeded demo data.
-2. Click **Log Activity** in sidebar.
-3. Fill form: file name `Q4_Budget_Analysis.xlsx`, application `Excel`, start 09:00, end 10:30.
-4. Submit → redirect to activity list → new activity shows work type `Analysis`, confidence `0.80`.
-5. Log 2 more activities: `Homepage_Mockup.fig` (Figma, 30 min) → `Design`; `api-routes.ts` (VS Code, 45 min) → `Development`.
-6. Go to **Timesheets** → see 3 daily entries (one per work type) for today.
-7. Click **Approve** on the Design entry → status changes to `approved`; audit log written.
-8. Click **Edit** on the Development entry → change duration to 60 min → save → status = `edited`.
-9. Go to **Dashboard** → bar chart shows minutes by work type; table shows per-consultant totals.
-10. Go to **Reports** → filter by today → see breakdown by consultant, job role, work type.
+1. Open app (no login) → Dashboard loads showing seeded consultant hours and work-type breakdown.
+2. Navigate to **Activity Log** → verify 20+ raw file events with file names, timestamps, consultants.
+3. `POST /api/activity` with a new file event (consultant_id, file_name, started_at, ended_at).
+4. `POST /api/aggregate` for that consultant + date → new `timesheet_entries` row created.
+5. Navigate to **Timesheet** → new entry appears with correct duration.
+6. Navigate to **Reports** → monthly summary shows updated total for that consultant.
+7. Drill into yearly by job role → numbers match monthly sums.
 
 ## Empty State
-- Clear all activities → dashboard shows: "No activity data yet. Log your first activity to get started." with a button to `/activities/new`.
-- Timesheets page with no entries: "No timesheet entries. Log activities to generate your daily timesheet."
-- Reports with no data: "No results for the selected filters. Try a wider date range."
+- Clear all timesheet_entries (keep schema) → Dashboard shows "No timesheet data yet. Activity events will appear once consultants start working."
+- Reports page: "No data for selected period" with disabled filters.
 
-## Error Cases
-- Submit activity form with end < start → inline error: "End time must be after start time."
-- Submit with empty file name → inline error: "File name is required."
-- Network failure on submit → toast: "Failed to save activity. Check your connection and try again."
-- Rollup with zero activities for the day → no timesheet entries created (no empty rows).
+## Error State
+- `POST /api/activity` missing required fields → 400 with field-level error message.
+- `POST /api/aggregate` with invalid date range → 400 "Start date must be before end date."
+- Database connection fails → all pages show error banner "Unable to load data. Please retry."
 
-## Loading States
-- Activity list → skeleton rows for 2 seconds (simulated delay).
-- Dashboard charts → spinner with "Loading time data…".
-- Timesheet table → pulsing row placeholders.
+## Loading State
+- Each page shows skeleton/spinner while data loads.
 
-## Classification Edge Cases
-- Filename with no matching keywords → work type = `Unclassified`, confidence = 0.30, review_status = `unreviewed`.
-- Filename matching multiple keyword sets → first match wins (Documentation > Design > Development priority).
+## Config
+- Settings → add new client "Test Client" → appears in client dropdown on Timesheet entry form.
+- Delete a work type that has entries → confirm dialog warns entries will lose their work_type_id.
+
+## Audit
+- Create a manual entry → check `audit_logs` has row with action='entry.create'.
+- Edit entry duration → audit_logs has action='entry.update' with before/after values.
+- Delete entry → audit_logs has action='entry.delete' with full before-state.
