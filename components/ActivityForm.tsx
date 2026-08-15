@@ -7,11 +7,11 @@ import type { Consultant } from "@/lib/types";
 const initialState: LogActivityState = { error: null };
 
 const APPLICATIONS = [
-  "Word",
   "Excel",
-  "PowerPoint",
-  "Figma",
-  "VS Code",
+  "Word",
+  "Outlook",
+  "QuickBooks",
+  "Adobe Acrobat",
   "Other",
 ];
 
@@ -67,7 +67,7 @@ export default function ActivityForm({
           name="file_name"
           type="text"
           required
-          placeholder="Q4_Budget_Analysis.xlsx"
+          placeholder="Client_ABC_Tax_Return_2024.docx"
           className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
         />
       </div>

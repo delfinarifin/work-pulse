@@ -1,6 +1,6 @@
 # work-pulse
 
-Work Pulse auto-captures consultants' file-based activity, classifies it by work type using rule-based matching, rolls it into daily timesheet entries, and reports time spent by consultant, job role, and work type — viewable without login in v1.
+Work Pulse auto-captures tax and accounting consultants' file-based activity, classifies it by work type (tax preparation, bookkeeping, audit, advisory, financial reporting) using rule-based matching, rolls it into daily timesheet entries, and reports time spent by consultant, job role, and work type — viewable without login in v1.
 
 ## ⚠️ READ THIS BEFORE WRITING ANY CODE
 A complete, correct plan for this app is already committed in `/docs`. Do **not** start

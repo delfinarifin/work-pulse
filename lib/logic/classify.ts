@@ -2,11 +2,11 @@ import type { WorkType } from "@/lib/types";
 
 // Matches docs/INTELLIGENCE_LAYER.md — first match wins, in this priority order.
 const PRIORITY_ORDER = [
-  "Documentation",
-  "Design",
-  "Development",
-  "Presentation",
-  "Analysis",
+  "Tax Preparation",
+  "Bookkeeping",
+  "Audit",
+  "Advisory",
+  "Financial Reporting",
 ];
 
 export type ClassificationResult = {
@@ -50,15 +50,15 @@ export function classifyActivity(
 
 function confidenceFor(label: string): number {
   switch (label) {
-    case "Documentation":
+    case "Tax Preparation":
       return 0.85;
-    case "Design":
+    case "Bookkeeping":
       return 0.8;
-    case "Development":
+    case "Audit":
       return 0.9;
-    case "Presentation":
+    case "Advisory":
       return 0.85;
-    case "Analysis":
+    case "Financial Reporting":
       return 0.8;
     default:
       return 0.3;

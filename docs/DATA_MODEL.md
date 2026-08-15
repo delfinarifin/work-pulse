@@ -33,7 +33,7 @@
 - id uuid PK
 - consultant_id uuid → consultants.id
 - file_name text
-- application text (e.g. "Word", "Figma", "VS Code")
+- application text (e.g. "Excel", "Word", "QuickBooks")
 - event_type text (open/edit/close)
 - started_at timestamptz
 - ended_at timestamptz

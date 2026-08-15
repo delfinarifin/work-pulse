@@ -3,12 +3,12 @@
 ## v1 Success Scenario (manual)
 1. Open app (no login) → dashboard renders with seeded demo data.
 2. Click **Log Activity** in sidebar.
-3. Fill form: file name `Q4_Budget_Analysis.xlsx`, application `Excel`, start 09:00, end 10:30.
-4. Submit → redirect to activity list → new activity shows work type `Analysis`, confidence `0.80`.
-5. Log 2 more activities: `Homepage_Mockup.fig` (Figma, 30 min) → `Design`; `api-routes.ts` (VS Code, 45 min) → `Development`.
+3. Fill form: file name `Budget_Forecast_2025.xlsx`, application `Excel`, start 09:00, end 10:30.
+4. Submit → redirect to activity list → new activity shows work type `Financial Reporting`, confidence `0.80`.
+5. Log 2 more activities: `Bank_Reconciliation_Nov.xlsx` (Excel, 30 min) → `Bookkeeping`; `Audit_Workpaper_Q4.pdf` (Adobe Acrobat, 45 min) → `Audit`.
 6. Go to **Timesheets** → see 3 daily entries (one per work type) for today.
-7. Click **Approve** on the Design entry → status changes to `approved`; audit log written.
-8. Click **Edit** on the Development entry → change duration to 60 min → save → status = `edited`.
+7. Click **Approve** on the Bookkeeping entry → status changes to `approved`; audit log written.
+8. Click **Edit** on the Audit entry → change duration to 60 min → save → status = `edited`.
 9. Go to **Dashboard** → bar chart shows minutes by work type; table shows per-consultant totals.
 10. Go to **Reports** → filter by today → see breakdown by consultant, job role, work type.
 
@@ -30,4 +30,4 @@
 
 ## Classification Edge Cases
 - Filename with no matching keywords → work type = `Unclassified`, confidence = 0.30, review_status = `unreviewed`.
-- Filename matching multiple keyword sets → first match wins (Documentation > Design > Development priority).
+- Filename matching multiple keyword sets → first match wins (Tax Preparation > Bookkeeping > Audit priority).

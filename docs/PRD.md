@@ -1,10 +1,10 @@
 # Work Pulse — PRD
 
 ## Problem
-Consultants manually log time on spreadsheets, losing accuracy and hours. Work Pulse automatically captures file-based activity (documents, design files, code edits) and turns it into timesheet summaries by consultant, job role, and work type.
+Tax and accounting consultants manually log time on spreadsheets, losing accuracy and hours. Work Pulse automatically captures file-based activity (tax returns, workpapers, ledgers, client memos) and turns it into timesheet summaries by consultant, job role, and work type.
 
 ## Target Users
-- **Consultants** — whose activity is auto-captured; they review/approve auto-generated timesheets.
+- **Consultants** — tax preparers, accountants, and auditors whose activity is auto-captured; they review/approve auto-generated timesheets.
 - **Managers** — view workload and time-spent reports across consultants and teams.
 - **Admins** — manage job roles, work types, and data-access settings.
 
@@ -12,7 +12,7 @@ Consultants manually log time on spreadsheets, losing accuracy and hours. Work P
 - **Consultant** (name, email, job_role_id, team_id)
 - **Team** (name)
 - **JobRole** (title)
-- **WorkType** (label, category — e.g. "Design", "Documentation", "Development")
+- **WorkType** (label, category — e.g. "Tax Preparation", "Bookkeeping", "Audit")
 - **Activity** (consultant_id, file_name, application, event_type, started_at, ended_at, duration_seconds, work_type_id, project_label) — AI-suggested work_type_id + classification confidence
 - **TimesheetEntry** (consultant_id, date, work_type_id, job_role_id, total_minutes, source="auto|manual", status)
 - **AuditLog** (actor, action, target_type, target_id, metadata)

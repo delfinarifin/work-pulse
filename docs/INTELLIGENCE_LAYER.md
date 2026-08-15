@@ -1,17 +1,17 @@
 # Work Pulse — Intelligence Layer
 
 ## Messy Inputs
-Raw file activity: `"Q4_Financial_Report_v3.docx"` in Word, `"Homepage_Hero.fig"` in Figma, `"api-handler.ts"` in VS Code.
+Raw file activity: `"SPT_Tahunan_PT_ABC_2024.docx"` in Word, `"Bank_Reconciliation_Nov2024.xlsx"` in Excel, `"Audit_Workpaper_Q4.pdf"` in Adobe Acrobat.
 
 ## Auto-Structure Schema
 ```json
 {
-  "file_name": "Q4_Financial_Report_v3.docx",
+  "file_name": "SPT_Tahunan_PT_ABC_2024.docx",
   "application": "Word",
   "started_at": "2025-01-15T09:00:00Z",
   "ended_at": "2025-01-15T09:45:00Z",
   "duration_seconds": 2700,
-  "classified_work_type": "Documentation",
+  "classified_work_type": "Tax Preparation",
   "classification_source": "rule-based",
   "classification_confidence": 0.85,
   "review_status": "unreviewed"
@@ -28,11 +28,11 @@ Raw file activity: `"Q4_Financial_Report_v3.docx"` in Word, `"Homepage_Hero.fig"
 ## Scoring / Classification Rules (rule-based, v1)
 | Keyword(s) in filename | Work Type | Confidence |
 |------------------------|-----------|------------|
-| report, doc, docx, pdf, spec | Documentation | 0.85 |
-| fig, design, mockup, wireframe | Design | 0.80 |
-| .ts, .py, .js, api, code, test | Development | 0.90 |
-| slide, pptx, deck | Presentation | 0.85 |
-| sheet, xlsx, csv, budget | Analysis | 0.80 |
+| tax, spt, pph, ppn, faktur, return, 1040, 1120, w2, 1099 | Tax Preparation | 0.85 |
+| ledger, journal, jurnal, reconciliation, recon, gl, coa, buku_besar | Bookkeeping | 0.80 |
+| audit, workpaper, wp, fieldwork, engagement, sampling | Audit | 0.90 |
+| memo, advisory, planning, opinion, strategy, structuring | Advisory | 0.85 |
+| financial_statement, balance_sheet, income_statement, cashflow, budget, forecast, laporan, report | Financial Reporting | 0.80 |
 | (no match) | Unclassified | 0.30 |
 
 Roll-up confidence = min of constituent activity confidences.
