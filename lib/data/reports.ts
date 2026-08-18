@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import type { BillableStatus } from "@/lib/types";
 
 export type ReportFilters = {
   consultantId?: string;
   clientId?: string;
   workTypeId?: string;
+  serviceId?: string;
+  taskId?: string;
+  billableStatus?: string;
   startDate?: string;
   endDate?: string;
 };
@@ -16,12 +20,15 @@ export type ReportRow = {
   job_role: string | null;
   client_name: string | null;
   work_type_name: string;
+  service_name: string | null;
+  task_name: string | null;
+  billable_status: BillableStatus;
   duration_minutes: number;
   source: string;
 };
 
 const ROW_SELECT =
-  "id, date, duration_minutes, source, consultant:consultants(id, name, job_role), client:clients(name), work_type:work_types(name)";
+  "id, date, duration_minutes, source, billable_status, consultant:consultants(id, name, job_role), client:clients(name), work_type:work_types(name), service:services(name), task:tasks(name)";
 
 export async function listReportRows(
   filters: ReportFilters = {},
@@ -37,6 +44,15 @@ export async function listReportRows(
   }
   if (filters.workTypeId) {
     query = query.eq("work_type_id", filters.workTypeId);
+  }
+  if (filters.serviceId) {
+    query = query.eq("service_id", filters.serviceId);
+  }
+  if (filters.taskId) {
+    query = query.eq("task_id", filters.taskId);
+  }
+  if (filters.billableStatus) {
+    query = query.eq("billable_status", filters.billableStatus);
   }
   if (filters.startDate) {
     query = query.gte("date", filters.startDate);
@@ -56,9 +72,12 @@ export async function listReportRows(
       date: string;
       duration_minutes: number;
       source: string;
+      billable_status: BillableStatus;
       consultant: { id: string; name: string; job_role: string } | null;
       client: { name: string } | null;
       work_type: { name: string } | null;
+      service: { name: string } | null;
+      task: { name: string } | null;
     };
     return {
       entry_id: r.id,
@@ -68,6 +87,9 @@ export async function listReportRows(
       job_role: r.consultant?.job_role ?? null,
       client_name: r.client?.name ?? null,
       work_type_name: r.work_type?.name ?? "Unclassified",
+      service_name: r.service?.name ?? null,
+      task_name: r.task?.name ?? null,
+      billable_status: r.billable_status,
       duration_minutes: r.duration_minutes,
       source: r.source,
     };

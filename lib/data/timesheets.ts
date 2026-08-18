@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import type { TimesheetEntryWithJoins } from "@/lib/types";
+import type { BillableStatus, TimesheetEntryWithJoins } from "@/lib/types";
 import { listActivityEventsForConsultantOnDate } from "@/lib/data/activity-events";
+import { listActivitySessionsForConsultantOnDate } from "@/lib/data/sessions";
 import { writeAuditLog } from "@/lib/data/audit-logs";
-import { aggregateActivityEvents } from "@/lib/logic/aggregation";
+import { aggregateActivityEvents, aggregateActivitySessions } from "@/lib/logic/aggregation";
 
 const ENTRY_SELECT =
-  "*, consultant:consultants(id, name, job_role), client:clients(id, name), work_type:work_types(id, name, category)";
+  "*, consultant:consultants(id, name, job_role), client:clients(id, name), work_type:work_types(id, name, category), service:services(id, name), task:tasks(id, name)";
 
 export async function listTimesheetEntries(): Promise<
   TimesheetEntryWithJoins[]
@@ -21,10 +22,9 @@ export async function listTimesheetEntries(): Promise<
   return (data ?? []) as unknown as TimesheetEntryWithJoins[];
 }
 
-// Recomputes today's-day aggregation for one consultant from their activity
-// events and reconciles it against existing timesheet_entries: inserts new
-// auto rows, refreshes durations on existing auto rows, and never touches
-// manual entries (those are the consultant's own record, not auto-derived).
+// Legacy path (pre-classification-engine): recomputes a day's aggregation
+// from activity_events. Kept working unchanged for anything still on that
+// path; the new "Log Activity" flow uses runSessionAggregationForConsultantDate.
 export async function runAggregationForConsultantDate(
   consultantId: string,
   date: string,
@@ -96,10 +96,104 @@ export async function runAggregationForConsultantDate(
   }
 }
 
+// Reconciles a day's activity_sessions into timesheet_entries: inserts new
+// auto rows keyed by client+service+task+billable_status, refreshes duration
+// on existing auto rows, never touches manual rows. Sessions still awaiting
+// confirmation (no task_id, or review_status='ignored') contribute nothing —
+// see aggregateActivitySessions.
+export async function runSessionAggregationForConsultantDate(
+  consultantId: string,
+  date: string,
+): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const [sessions, existingRes] = await Promise.all([
+    listActivitySessionsForConsultantOnDate(consultantId, date),
+    supabase
+      .from("timesheet_entries")
+      .select("id, client_id, service_id, task_id, billable_status, source")
+      .eq("consultant_id", consultantId)
+      .eq("date", date),
+  ]);
+
+  if (existingRes.error) throw existingRes.error;
+
+  const existingByKey = new Map(
+    (existingRes.data ?? []).map((e) => [
+      `${e.client_id ?? "none"}:${e.service_id ?? "none"}:${e.task_id}:${e.billable_status}`,
+      e,
+    ]),
+  );
+
+  const groups = aggregateActivitySessions(sessions, consultantId, date);
+  const groupKeys = new Set(
+    groups.map((g) => `${g.client_id ?? "none"}:${g.service_id ?? "none"}:${g.task_id}:${g.billable_status}`),
+  );
+  let createdCount = 0;
+
+  // An existing auto entry whose key no longer has any backing session
+  // (the session that created it was ignored, deleted, or merged away) is
+  // now orphaned — remove it rather than leaving stale billable minutes.
+  for (const [key, existing] of existingByKey) {
+    if (existing.source === "auto" && !groupKeys.has(key)) {
+      const { error } = await supabase.from("timesheet_entries").delete().eq("id", existing.id);
+      if (error) throw error;
+    }
+  }
+
+  for (const group of groups) {
+    const key = `${group.client_id ?? "none"}:${group.service_id ?? "none"}:${group.task_id}:${group.billable_status}`;
+    const existing = existingByKey.get(key);
+
+    if (!existing) {
+      const { error } = await supabase.from("timesheet_entries").insert({
+        consultant_id: group.consultant_id,
+        client_id: group.client_id,
+        service_id: group.service_id,
+        task_id: group.task_id,
+        work_type_id: group.work_type_id,
+        billable_status: group.billable_status,
+        session_id: group.session_id,
+        date: group.date,
+        duration_minutes: group.duration_minutes,
+        source: "auto",
+        user_id: user?.id ?? null,
+      });
+      if (error) throw error;
+      createdCount += 1;
+    } else if (existing.source === "auto") {
+      const { error } = await supabase
+        .from("timesheet_entries")
+        .update({ duration_minutes: group.duration_minutes })
+        .eq("id", existing.id);
+      if (error) throw error;
+    }
+  }
+
+  if (createdCount > 0) {
+    await writeAuditLog({
+      action: "entry.create",
+      entity: "timesheet_entries",
+      entity_id: null,
+      details: { consultant_id: consultantId, date, count: createdCount, source: "auto" },
+    });
+  }
+}
+
 export async function editTimesheetEntry(
   id: string,
-  changes: { work_type_id?: string; duration_minutes?: number; notes?: string | null },
-  before: { work_type_id: string | null; duration_minutes: number; notes: string | null },
+  changes: Partial<{
+    work_type_id: string;
+    service_id: string | null;
+    task_id: string | null;
+    billable_status: BillableStatus;
+    duration_minutes: number;
+    notes: string | null;
+  }>,
+  before: Record<string, unknown>,
 ): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase

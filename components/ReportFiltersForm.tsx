@@ -1,14 +1,24 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import type { Consultant, WorkType } from "@/lib/types";
+import type { Consultant, Service, WorkType } from "@/lib/types";
+
+const BILLABLE_OPTIONS = [
+  { value: "billable", label: "Billable" },
+  { value: "non_billable", label: "Non-billable" },
+  { value: "internal", label: "Internal" },
+  { value: "training", label: "Training" },
+  { value: "administration", label: "Administration" },
+];
 
 export default function ReportFiltersForm({
   consultants,
   workTypes,
+  services,
 }: {
   consultants: Consultant[];
   workTypes: WorkType[];
+  services: Service[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -45,6 +55,25 @@ export default function ReportFiltersForm({
       </div>
 
       <div className="space-y-1">
+        <label htmlFor="service" className="text-xs font-medium text-neutral-600">
+          Service
+        </label>
+        <select
+          id="service"
+          defaultValue={searchParams.get("service") ?? ""}
+          onChange={(e) => updateParam("service", e.target.value)}
+          className="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm"
+        >
+          <option value="">All services</option>
+          {services.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
         <label htmlFor="workType" className="text-xs font-medium text-neutral-600">
           Work type
         </label>
@@ -58,6 +87,25 @@ export default function ReportFiltersForm({
           {workTypes.map((wt) => (
             <option key={wt.id} value={wt.id}>
               {wt.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor="billable" className="text-xs font-medium text-neutral-600">
+          Billable status
+        </label>
+        <select
+          id="billable"
+          defaultValue={searchParams.get("billable") ?? ""}
+          onChange={(e) => updateParam("billable", e.target.value)}
+          className="rounded-md border border-neutral-300 px-2.5 py-1.5 text-sm"
+        >
+          <option value="">All statuses</option>
+          {BILLABLE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
             </option>
           ))}
         </select>

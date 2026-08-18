@@ -2,19 +2,31 @@
 
 import { useState } from "react";
 import { deleteEntryAction, editEntryAction } from "@/app/timesheets/actions";
-import type { TimesheetEntryWithJoins, WorkType } from "@/lib/types";
+import type { BillableStatus, Service, Task, TimesheetEntryWithJoins, WorkType } from "@/lib/types";
 
 const SOURCE_STYLES: Record<string, string> = {
   auto: "bg-neutral-100 text-neutral-600",
   manual: "bg-amber-50 text-amber-700",
 };
 
+const BILLABLE_LABELS: Record<BillableStatus, string> = {
+  billable: "Billable",
+  non_billable: "Non-billable",
+  internal: "Internal",
+  training: "Training",
+  administration: "Administration",
+};
+
 export default function TimesheetTable({
   entries,
   workTypes,
+  services,
+  tasks,
 }: {
   entries: TimesheetEntryWithJoins[];
   workTypes: WorkType[];
+  services: Service[];
+  tasks: Task[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -27,7 +39,9 @@ export default function TimesheetTable({
             <th className="px-4 py-2 font-medium">Consultant</th>
             <th className="px-4 py-2 font-medium">Job Role</th>
             <th className="px-4 py-2 font-medium">Client</th>
-            <th className="px-4 py-2 font-medium">Work Type</th>
+            <th className="px-4 py-2 font-medium">Service</th>
+            <th className="px-4 py-2 font-medium">Task</th>
+            <th className="px-4 py-2 font-medium">Billable</th>
             <th className="px-4 py-2 font-medium">Minutes</th>
             <th className="px-4 py-2 font-medium">Source</th>
             <th className="px-4 py-2 font-medium">Actions</th>
@@ -47,7 +61,13 @@ export default function TimesheetTable({
                 {entry.client?.name ?? "—"}
               </td>
               <td className="px-4 py-2.5 text-neutral-600">
-                {entry.work_type?.name ?? "Unclassified"}
+                {entry.service?.name ?? "—"}
+              </td>
+              <td className="px-4 py-2.5 text-neutral-600">
+                {entry.task?.name ?? "—"}
+              </td>
+              <td className="px-4 py-2.5 text-neutral-600">
+                {BILLABLE_LABELS[entry.billable_status]}
               </td>
               <td className="px-4 py-2.5 text-neutral-600">
                 {entry.duration_minutes}m
@@ -66,7 +86,7 @@ export default function TimesheetTable({
                       await editEntryAction(formData);
                       setEditingId(null);
                     }}
-                    className="flex items-center gap-2"
+                    className="flex flex-col gap-1.5 min-w-56"
                   >
                     <input type="hidden" name="id" value={entry.id} />
                     <select
@@ -80,33 +100,72 @@ export default function TimesheetTable({
                         </option>
                       ))}
                     </select>
-                    <input
-                      type="number"
-                      name="duration_minutes"
-                      min={0}
-                      defaultValue={entry.duration_minutes}
-                      className="w-16 rounded border border-neutral-300 px-1.5 py-1 text-xs"
-                    />
-                    <input
-                      type="text"
-                      name="notes"
-                      placeholder="Notes"
-                      defaultValue={entry.notes ?? ""}
-                      className="w-28 rounded border border-neutral-300 px-1.5 py-1 text-xs"
-                    />
-                    <button
-                      type="submit"
-                      className="rounded bg-neutral-900 text-white px-2 py-1 text-xs font-medium"
+                    <select
+                      name="service_id"
+                      defaultValue={entry.service_id ?? ""}
+                      className="rounded border border-neutral-300 px-1.5 py-1 text-xs"
                     >
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditingId(null)}
-                      className="text-xs text-neutral-500"
+                      <option value="">No service</option>
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="task_id"
+                      defaultValue={entry.task_id ?? ""}
+                      className="rounded border border-neutral-300 px-1.5 py-1 text-xs"
                     >
-                      Cancel
-                    </button>
+                      <option value="">No task</option>
+                      {tasks.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      name="billable_status"
+                      defaultValue={entry.billable_status}
+                      className="rounded border border-neutral-300 px-1.5 py-1 text-xs"
+                    >
+                      {Object.entries(BILLABLE_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        name="duration_minutes"
+                        min={0}
+                        defaultValue={entry.duration_minutes}
+                        className="w-16 rounded border border-neutral-300 px-1.5 py-1 text-xs"
+                      />
+                      <input
+                        type="text"
+                        name="notes"
+                        placeholder="Notes"
+                        defaultValue={entry.notes ?? ""}
+                        className="w-28 rounded border border-neutral-300 px-1.5 py-1 text-xs"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        className="rounded bg-neutral-900 text-white px-2 py-1 text-xs font-medium"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="text-xs text-neutral-500"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </form>
                 ) : (
                   <div className="flex items-center gap-2">

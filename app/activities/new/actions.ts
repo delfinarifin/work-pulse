@@ -1,22 +1,45 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { insertActivityEvent } from "@/lib/data/activity-events";
+import { createClient } from "@/lib/supabase/server";
+import { insertActivitySession } from "@/lib/data/sessions";
 import { writeAuditLog } from "@/lib/data/audit-logs";
-import { listWorkTypes } from "@/lib/data/work-types";
 import { getCurrentConsultant } from "@/lib/data/consultants";
-import { runAggregationForConsultantDate } from "@/lib/data/timesheets";
-import { classifyActivity } from "@/lib/logic/classify";
+import { runSessionAggregationForConsultantDate } from "@/lib/data/timesheets";
+import { classifySession, type ClassifySessionResult } from "@/lib/classification/classifySession";
 
 export type LogActivityState = {
   error: string | null;
 };
+
+// Called live from the client as the consultant types a file name (debounced)
+// so the form can pre-fill client/service/task before they even submit —
+// the concrete, buildable-today expression of "minimize manual input."
+export async function suggestClassification(
+  fileName: string,
+): Promise<ClassifySessionResult | null> {
+  if (!fileName.trim()) return null;
+  const consultant = await getCurrentConsultant();
+  if (!consultant) return null;
+
+  const supabase = await createClient();
+  return classifySession(supabase, {
+    consultantId: consultant.id,
+    fileName,
+    filePath: null,
+    applicationName: null,
+    windowTitle: null,
+  });
+}
 
 export async function logActivity(
   _prevState: LogActivityState,
   formData: FormData,
 ): Promise<LogActivityState> {
   const client_id = String(formData.get("client_id") ?? "").trim();
+  const service_id = String(formData.get("service_id") ?? "").trim();
+  const task_id = String(formData.get("task_id") ?? "").trim();
+  const billable_status = String(formData.get("billable_status") ?? "billable");
   const file_name = String(formData.get("file_name") ?? "").trim();
   const started_at = String(formData.get("started_at") ?? "");
   const ended_at = String(formData.get("ended_at") ?? "");
@@ -37,40 +60,81 @@ export async function logActivity(
     return { error: "End time must be after start time." };
   }
 
-  let event;
   try {
     const consultant = await getCurrentConsultant();
     if (!consultant) {
       return { error: "You must be signed in to log activity." };
     }
 
-    const workTypes = await listWorkTypes();
-    const classification = classifyActivity(file_name, workTypes);
+    const supabase = await createClient();
+    const classification = await classifySession(supabase, {
+      consultantId: consultant.id,
+      fileName: file_name,
+      filePath: null,
+      applicationName: null,
+      windowTitle: null,
+    });
 
-    event = await insertActivityEvent({
+    const activeDurationMinutes = Math.round(
+      (endDate.getTime() - startDate.getTime()) / 60000,
+    );
+
+    // The consultant's own picks always win over the auto-suggestion —
+    // they're either confirming the suggestion or correcting it inline.
+    const finalClientId = client_id || classification.clientId;
+    const finalServiceId = service_id || classification.serviceId;
+    const finalTaskId = task_id || classification.taskId;
+    const humanOverrode =
+      (!!client_id && client_id !== classification.clientId) ||
+      (!!service_id && service_id !== classification.serviceId) ||
+      (!!task_id && task_id !== classification.taskId);
+
+    // High-confidence suggestions the consultant didn't touch are treated as
+    // already reviewed — no need to ask them to confirm what they just saw
+    // and accepted by submitting. Low-confidence ones still need a
+    // Confirm/Change/Ignore pass on the Activity Log.
+    const reviewStatus = humanOverrode
+      ? "changed"
+      : classification.needsConfirmation
+        ? "unreviewed"
+        : "confirmed";
+
+    const session = await insertActivitySession({
       consultant_id: consultant.id,
-      client_id: client_id || null,
+      client_id: finalClientId,
+      service_id: finalServiceId,
+      task_id: finalTaskId,
+      work_type_id: classification.workTypeId,
+      billable_status:
+        (billable_status as typeof classification.billableStatus) ||
+        classification.billableStatus,
       file_name,
-      event_type: "edit",
       started_at: startDate.toISOString(),
       ended_at: endDate.toISOString(),
-      work_type_id: classification.work_type_id,
-      work_type_source: classification.work_type_source,
-      work_type_confidence: classification.work_type_confidence,
+      active_duration_minutes: activeDurationMinutes,
+      classification_method: humanOverrode
+        ? "manual"
+        : classification.clientMethod ?? classification.serviceMethod ?? "manual",
+      classification_confidence: humanOverrode ? 1 : classification.overallConfidence,
+      review_status: reviewStatus,
+      source: "manual",
     });
 
     await writeAuditLog({
-      action: "activity.classified",
-      entity: "activity_events",
-      entity_id: event.id,
+      action: "session.classify",
+      entity: "activity_sessions",
+      entity_id: session.id,
       details: {
         file_name,
-        work_type: classification.work_type_name ?? "Unclassified",
-        confidence: classification.work_type_confidence,
+        client_id: finalClientId,
+        service_id: finalServiceId,
+        task_id: finalTaskId,
+        confidence: classification.overallConfidence,
+        human_overrode: humanOverrode,
       },
     });
 
-    await runAggregationForConsultantDate(
+    await runSessionAggregationForConsultantDate(
       consultant.id,
       startDate.toISOString().slice(0, 10),
     );

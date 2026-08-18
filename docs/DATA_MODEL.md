@@ -20,6 +20,9 @@
 | created_at | timestamptz default now() |
 
 ## work_types
+Legacy classification (pre-services/tasks). Kept because `timesheet_entries.work_type_id` is
+`NOT NULL` and existing reporting code reads it — every `service` bridges to one via
+`default_work_type_id`.
 | Field | Type |
 |-------|------|
 | id | uuid pk |
@@ -27,7 +30,169 @@
 | category | text not null ('tax' or 'accounting') |
 | created_at | timestamptz default now() |
 
+## services
+Firm-wide practice areas. Read-only via RLS (authenticated read) — no admin role yet to gate
+writes, so seeded/edited via migration.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| name | text not null unique (Tax Compliance, Tax Advisory, Tax Audit Assistance, Transfer Pricing, Accounting, Bookkeeping, Corporate Services, Tax Dispute/Objection, Tax Investigation, Other) |
+| default_work_type_id | uuid nullable → work_types |
+| created_at | timestamptz default now() |
+
+## tasks
+Firm-wide task list (CIT Computation, Tax Return Preparation, Tax Return Review, PPh/VAT
+Calculation, Bank Reconciliation, Tax Research, Tax Advisory, Transfer Pricing Documentation,
+Financial Statement Preparation, Bookkeeping, Client Meeting, Internal Meeting,
+Email/Correspondence, Administration). Same RLS pattern as `services`.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| name | text not null unique |
+| created_at | timestamptz default now() |
+
+## service_mappings / task_mappings
+Configurable keyword → service/task rules — the DB-driven successor to the old hardcoded array
+in `lib/logic/classify.ts` (now removed; superseded by `lib/classification/`).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| service_id / task_id | uuid not null → services / tasks |
+| pattern | text not null |
+| match_scope | text ('filename' / 'path' / 'window_title') |
+| priority | int (lower checked first) |
+| confidence | numeric |
+| active | boolean |
+| created_at | timestamptz default now() |
+
+## client_file_mappings
+Client-identification rules — layers 1–3 of the client cascade (exact file, folder path,
+filename/client code).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| client_id | uuid not null → clients |
+| pattern_type | text ('exact_file' / 'folder_path' / 'filename_regex' / 'client_code') |
+| pattern | text not null |
+| match_scope | text |
+| priority | int |
+| active | boolean |
+| created_at | timestamptz default now() |
+
+## billable_task_rules
+Default billable status per task, with an optional per-client override.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| task_id | uuid not null → tasks |
+| client_id | uuid nullable → clients (override) |
+| billable_status | text ('billable' / 'non_billable' / 'internal' / 'training' / 'administration') |
+| priority | int |
+| active | boolean |
+| created_at | timestamptz default now() |
+
+## activity_classifications
+Audit trail of the classification layer that won each cascade (client/service/task) for a
+session — not every layer attempted, just the winners (see `lib/classification/classifySession.ts`).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| session_id | uuid not null → activity_sessions |
+| layer | text (learned_rule / exact_file / folder_pattern / filename_client_code / window_title / ai_metadata / keyword_mapping) |
+| client_id / service_id / task_id | uuid nullable |
+| confidence | numeric |
+| matched_rule_table / matched_rule_id | text / uuid |
+| accepted | boolean |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+## activity_learning_rules
+A consultant's remembered corrections — checked first, ahead of every firm-wide mapping table.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| scope | text ('personal' — always, in this phase; no admin role to promote to 'firm') |
+| pattern_type | text ('folder_path' / 'filename_keyword' / 'app_window_title') |
+| pattern | text not null |
+| match_scope | text |
+| client_id / service_id / task_id | uuid nullable |
+| billable_status | text nullable |
+| confidence | numeric default 0.95 |
+| times_applied | int |
+| source_session_id | uuid nullable → activity_sessions |
+| active | boolean |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+## classification_settings
+Per-consultant configurable thresholds, lazily created on first Settings visit.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null unique → consultants |
+| idle_threshold_minutes | int default 5 |
+| confidence_auto_accept_threshold | numeric default 0.75 |
+| confidence_confirm_threshold | numeric default 0.40 |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+## devices
+One row per future desktop-agent install — schema-ready, no agent yet (deferred, separate plan).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| device_name, platform, agent_version | text |
+| api_key_hash, api_key_prefix | text |
+| status | text ('pending' / 'active' / 'revoked') |
+| pairing_code, pairing_code_expires_at | text / timestamptz |
+| last_seen_at | timestamptz nullable |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+## activity_sessions
+The primary work-unit entity — what the "Log Activity" form creates today, and what the future
+desktop agent will create too (via `device_id`/`source='agent'`).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| device_id | uuid nullable → devices |
+| client_id / service_id / task_id | uuid nullable → clients / services / tasks |
+| work_type_id | uuid nullable → work_types (bridged from `services.default_work_type_id`) |
+| application_name, window_title, file_name, file_path | text nullable |
+| started_at | timestamptz not null |
+| ended_at | timestamptz nullable |
+| active_duration_minutes, idle_duration_minutes | int |
+| status | text ('active' / 'idle' / 'paused' / 'offline' / 'closed') |
+| billable_status | text ('billable' / 'non_billable' / 'internal' / 'training' / 'administration') |
+| classification_method | text |
+| classification_confidence | numeric |
+| review_status | text ('unreviewed' / 'confirmed' / 'changed' / 'ignored') |
+| source | text ('agent' / 'manual') |
+| merged_into_session_id | uuid nullable → activity_sessions (merge lineage) |
+| notes | text nullable |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+## idle_periods
+Idle spans within a session — schema-ready for the agent; not populated yet.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| session_id | uuid not null → activity_sessions |
+| device_id | uuid nullable → devices |
+| started_at, ended_at | timestamptz |
+| duration_minutes | int |
+| reason | text ('no_input' / 'screen_lock' / 'manual_pause' / 'offline') |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
 ## activity_events
+Legacy fine-grained event log (pre-sessions), retained for the future agent's raw telemetry
+(open/edit/close pings feeding into a grouped `activity_sessions` row). Not written by the
+current "Log Activity" flow.
 | Field | Type |
 |-------|------|
 | id | uuid pk |
@@ -36,12 +201,15 @@
 | file_name | text not null |
 | file_path | text |
 | event_type | text not null ('open' / 'edit' / 'close') |
-| work_type_id | uuid nullable → work_types (AI-suggested) |
-| work_type_source | text (AI field source) |
-| work_type_confidence | numeric (AI field confidence) |
+| work_type_id | uuid nullable → work_types |
+| work_type_source | text |
+| work_type_confidence | numeric |
 | review_status | text default 'unreviewed' |
 | started_at | timestamptz not null |
 | ended_at | timestamptz |
+| session_id | uuid nullable → activity_sessions |
+| device_id | uuid nullable → devices |
+| is_idle | boolean default false |
 | created_at | timestamptz default now() |
 
 ## timesheet_entries
@@ -50,7 +218,10 @@
 | id | uuid pk |
 | consultant_id | uuid not null → consultants |
 | client_id | uuid nullable → clients |
-| work_type_id | uuid not null → work_types |
+| work_type_id | uuid not null → work_types (bridged) |
+| service_id / task_id | uuid nullable → services / tasks |
+| billable_status | text not null default 'billable' |
+| session_id | uuid nullable → activity_sessions |
 | date | date not null |
 | duration_minutes | int not null default 0 |
 | source | text not null default 'auto' ('auto' or 'manual') |
@@ -59,17 +230,26 @@
 | created_at | timestamptz default now() |
 
 ## audit_logs
+Append-only; also serves as `activity_audit_logs` — new code just uses new `action`/`entity`
+values (`session.classify`, `session.confirm`, `session.change`, `session.ignore`,
+`session.merge`, `session.correct`, `session.delete`, `learning_rule.create`,
+`settings.update`) rather than a separate table.
 | Field | Type |
 |-------|------|
 | id | uuid pk |
 | user_id | uuid nullable |
-| action | text not null (e.g., 'entry.update', 'entry.create') |
+| action | text not null |
 | entity | text not null |
 | entity_id | uuid |
 | details | jsonb |
 | created_at | timestamptz default now() |
 
 ## RLS Notes
-- All tables have RLS enabled.
-- v1: permissive read/write policies (demo without login).
-- Lock-down: replace with `auth.uid() = user_id` owner-scoped policies.
+- **Owner-scoped** (`auth.uid() = user_id`): consultants, activity_sessions, idle_periods,
+  activity_events, activity_classifications, activity_learning_rules, classification_settings,
+  timesheet_entries, audit_logs, devices.
+- **Shared reference data, authenticated-read** (no write policy — seeded via migration, no
+  admin role yet): clients (also authenticated-write, pre-existing), work_types (read-only,
+  pre-existing gap), services, tasks, service_mappings, task_mappings, client_file_mappings,
+  billable_task_rules.
+- Anonymous visitors are redirected to `/login` by middleware — there is no demo/no-login mode.

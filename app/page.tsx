@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { listActivityEvents } from "@/lib/data/activity-events";
+import { listActivitySessions } from "@/lib/data/sessions";
 
 export default async function DashboardPage() {
-  const events = await listActivityEvents(200);
+  const sessions = await listActivitySessions(200);
 
-  if (events.length === 0) {
+  if (sessions.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-neutral-300 p-10 text-center space-y-3">
         <p className="text-neutral-500">
@@ -21,17 +21,17 @@ export default async function DashboardPage() {
   }
 
   let totalMinutes = 0;
-  const byWorkType = new Map<string, number>();
-  for (const event of events) {
-    if (!event.ended_at) continue;
-    const minutes = Math.round(
-      (new Date(event.ended_at).getTime() - new Date(event.started_at).getTime()) / 60000,
-    );
-    totalMinutes += minutes;
-    const label = event.work_type?.name ?? "Unclassified";
-    byWorkType.set(label, (byWorkType.get(label) ?? 0) + minutes);
+  let billableMinutes = 0;
+  const byService = new Map<string, number>();
+  for (const session of sessions) {
+    if (session.review_status === "ignored") continue;
+    totalMinutes += session.active_duration_minutes;
+    if (session.billable_status === "billable") billableMinutes += session.active_duration_minutes;
+    const label = session.service?.name ?? "Unclassified";
+    byService.set(label, (byService.get(label) ?? 0) + session.active_duration_minutes);
   }
-  const consultantCount = new Set(events.map((e) => e.consultant_id)).size;
+  const consultantCount = new Set(sessions.map((s) => s.consultant_id)).size;
+  const needsReviewCount = sessions.filter((s) => s.review_status === "unreviewed").length;
 
   return (
     <div className="space-y-8">
@@ -42,18 +42,28 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <StatCard label="Total minutes logged" value={totalMinutes} />
+        <StatCard label="Billable minutes" value={billableMinutes} />
         <StatCard label="Consultants active" value={consultantCount} />
-        <StatCard label="Activities logged" value={events.length} />
+        <StatCard label="Awaiting review" value={needsReviewCount} />
       </div>
+
+      {needsReviewCount > 0 && (
+        <Link
+          href="/activities"
+          className="block rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        >
+          {needsReviewCount} {needsReviewCount === 1 ? "activity needs" : "activities need"} a quick confirm →
+        </Link>
+      )}
 
       <div>
         <h2 className="text-sm font-semibold text-neutral-700 mb-3">
-          Minutes by work type
+          Minutes by service
         </h2>
         <div className="space-y-2">
-          {Array.from(byWorkType.entries())
+          {Array.from(byService.entries())
             .sort((a, b) => b[1] - a[1])
             .map(([label, minutes]) => (
               <div key={label} className="flex items-center gap-3">

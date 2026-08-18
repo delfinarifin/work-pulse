@@ -6,46 +6,75 @@
 - **Hosting:** Vercel
 
 ## Build Sequencing
-- **Now:** File-activity capture → timesheet aggregation → summary dashboards
-- **Next:** Manual entry editing, client/work-type config screens, manager approval workflow
-- **Later:** Desktop agent for real file watching, per-user auth + RLS, billing export
+- **Now:** Layered classification engine (client/service/task cascade with confidence scoring),
+  Confirm/Change/Ignore review flow, learning rules, billable-status tracking, per-consultant
+  Settings.
+- **Next (separate, deferred plans):** Windows desktop agent (Tauri) for true zero-input
+  background capture; manager/admin roles + team dashboards; AI-assisted classification;
+  Microsoft Graph/SharePoint integration.
 
 ## Key User Action Flow
-1. A file-activity event is written to `activity_events` via the "Log Activity" form (a Server Action simulating a file watcher), which also runs rule-based classification.
-2. The same action triggers aggregation on-demand: it merges that consultant's events for the day into `timesheet_entries` grouped by client + work type + date.
-3. Dashboard and Reports read aggregated entries and render summaries.
-4. Consultant reviews entries on Timesheets, edits work type/duration/notes, or deletes entries — each change is audit-logged.
-5. Manager views reports filtered by consultant, job role, work type, client, or date range.
+1. The consultant types a file name on "Log Activity" — `suggestClassification` (a Server
+   Action) runs the layered pipeline live, pre-filling client/service/task before they even
+   submit.
+2. On submit, `logActivity` re-runs `classifySession()`, creates an `activity_sessions` row
+   (the human's own picks always win over the auto-suggestion), and triggers same-day
+   aggregation into `timesheet_entries` — all in one action.
+3. Dashboard and Reports read aggregated entries and render billable/service/consultant
+   summaries.
+4. On the Activity Log, low-confidence sessions show Confirm / Change / Ignore. **Change**
+   corrects the session AND writes a learning rule — the next matching file/folder
+   auto-classifies correctly. Sessions can also be merged or deleted, all audit-logged.
+5. Settings lets each consultant tune their idle threshold and confidence thresholds, and shows
+   their own learned rules and the firm's shared service/task keyword mappings (read-only —
+   no admin role yet to edit them from the UI).
 
 ## Responsive Nav Shell
-Left sidebar (desktop) with: **Dashboard**, **Log Activity**, **Activity Log**, **Timesheets**, **Reports**. Collapses to hamburger on mobile. (Settings/config screens are a later sprint — not in v1.)
+Left sidebar (desktop) with: **Dashboard**, **Log Activity**, **Activity Log**, **My
+Timesheets**, **Reports**, **Settings**. Collapses to hamburger on mobile.
 
 ## Layer Plan
 1. **Data layer** (`lib/data/`) — all DB reads/writes; typed query functions per object.
-2. **App logic** (`lib/logic/`) — aggregation rules, duration calculations, summary queries.
-3. **UI** (`app/`) — server components for data, client components for interactivity.
-4. **AI module** (`lib/ai/`) — work-type auto-classification (later).
+2. **Classification engine** (`lib/classification/`) — the layered client/service/task cascade;
+   `classifySession()` is the single entry point, composed of independently-testable layer
+   functions plus a shared text-normalization helper (`match.ts`).
+3. **App logic** (`lib/logic/`) — pure duration/grouping math (`aggregation.ts`); legacy
+   event-based path (`aggregateActivityEvents`) kept working, new session-based path
+   (`aggregateActivitySessions`) is what the live app uses.
+4. **UI** (`app/`) — server components for data, client components for interactivity.
 
 ## Why Core Works Without AI
-The core is deterministic: file events → time aggregation → summaries. All rules are SQL/TS logic. AI classification of work types is an additive layer that pre-fills `work_type_id` with a confidence score; the consultant can always override.
+The classification engine is fully deterministic — learned rules and configurable keyword/
+pattern mappings, no LLM in the loop. `lib/classification/layers/ai-metadata.ts` is scaffolded
+but disabled (`AI_CLASSIFICATION_ENABLED = false`) since no LLM API key is configured; the
+cascade works completely without it, just with lower coverage on ambiguous files.
 
 ## Repo Structure
 ```
 app/
-  page.tsx (dashboard)  activities/  timesheets/  reports/  layout.tsx
+  page.tsx (dashboard)  activities/  activities/new/  timesheets/  reports/  settings/
+  login/  signup/  layout.tsx
 lib/
-  data/       # activity-events.ts, timesheets.ts, consultants.ts, clients.ts, work-types.ts, reports.ts, audit-logs.ts
-  logic/      # classify.ts, aggregation.ts
-  supabase/   # client.ts, server.ts, middleware.ts
+  data/            # activity-events.ts (legacy), sessions.ts, timesheets.ts, consultants.ts,
+                   # clients.ts, services.ts, tasks.ts, work-types.ts, mappings.ts,
+                   # learning-rules.ts, classification-settings.ts, reports.ts, audit-logs.ts
+  classification/  # classifySession.ts + layers/ (learned-rules, client-file-mappings,
+                   # window-title, ai-metadata, service-task) + match.ts, types.ts
+  logic/           # aggregation.ts (event- and session-based)
+  supabase/        # client.ts, server.ts, middleware.ts
   types.ts
 ```
 
 ## Module Map
-| Module | Responsibility | Owns | Build Order |
-|--------|---------------|------|-------------|
-| activity-capture | Write file events to DB | activity_events | 1st |
-| aggregation | Merge events into timesheet entries | timesheet_entries | 2nd |
-| summaries | Monthly/yearly roll-ups | timesheet_entries (read) | 3rd |
-| dashboard | Productivity overview | all (read) | 4th |
-| config | Manage clients, work types, consultants | clients, work_types, consultants | 5th |
-| ai-classify | Auto-tag work type on events | activity_events.work_type_id | later |
+| Module | Responsibility | Owns | Status |
+|--------|---------------|------|--------|
+| activity-capture | Create sessions from Log Activity | activity_sessions | Live |
+| classification | Layered client/service/task cascade + confidence | activity_classifications | Live |
+| learning-rules | Remember corrections, auto-apply next time | activity_learning_rules | Live |
+| aggregation | Merge sessions into timesheet entries | timesheet_entries | Live |
+| review | Confirm/Change/Ignore, merge, delete | activity_sessions.review_status | Live |
+| settings | Per-consultant thresholds | classification_settings | Live |
+| desktop-agent | Real background file/app detection | devices, idle_periods | Deferred — separate plan, needs a Rust/Tauri build environment this sandbox doesn't have |
+| roles | Manager/admin dashboards | (no table yet) | Deferred |
+| ai-classify | LLM-assisted classification fallback | (scaffolded, disabled) | Deferred — needs an API key |
+| graph-integration | M365/SharePoint activity metadata | — | Deferred — needs the firm's Azure AD tenant admin |

@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { listTimesheetEntries } from "@/lib/data/timesheets";
 import { listWorkTypes } from "@/lib/data/work-types";
+import { listServices } from "@/lib/data/services";
+import { listTasks } from "@/lib/data/tasks";
 import TimesheetTable from "@/components/TimesheetTable";
 
 export default async function TimesheetsPage() {
-  const [entries, workTypes] = await Promise.all([
+  const [entries, workTypes, services, tasks] = await Promise.all([
     listTimesheetEntries(),
     listWorkTypes(),
+    listServices(),
+    listTasks(),
   ]);
 
   return (
@@ -33,7 +37,7 @@ export default async function TimesheetsPage() {
           </Link>
         </div>
       ) : (
-        <TimesheetTable entries={entries} workTypes={workTypes} />
+        <TimesheetTable entries={entries} workTypes={workTypes} services={services} tasks={tasks} />
       )}
     </div>
   );

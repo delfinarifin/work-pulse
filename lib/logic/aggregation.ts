@@ -1,4 +1,4 @@
-import type { ActivityEventWithJoins } from "@/lib/types";
+import type { ActivityEventWithJoins, ActivitySessionWithJoins } from "@/lib/types";
 
 export type AggregationGroup = {
   consultant_id: string;
@@ -40,6 +40,60 @@ export function aggregateActivityEvents(
         work_type_id: event.work_type_id,
         date,
         duration_minutes: minutes,
+      });
+    }
+  }
+
+  return Array.from(groups.values());
+}
+
+export type SessionAggregationGroup = {
+  consultant_id: string;
+  client_id: string | null;
+  service_id: string | null;
+  task_id: string | null;
+  work_type_id: string | null;
+  billable_status: string;
+  session_id: string;
+  date: string;
+  duration_minutes: number;
+};
+
+// Groups a consultant's activity sessions for one day by client + service +
+// task + billable_status into timesheet_entries rows. Only active_duration_
+// minutes counts — idle time never becomes billed/logged time. Sessions
+// without a task (still needing confirmation) contribute no duration, same
+// spirit as unclassified activity_events today.
+export function aggregateActivitySessions(
+  sessions: ActivitySessionWithJoins[],
+  consultantId: string,
+  date: string,
+): SessionAggregationGroup[] {
+  const groups = new Map<string, SessionAggregationGroup>();
+
+  for (const session of sessions) {
+    if (session.consultant_id !== consultantId) continue;
+    if (session.started_at.slice(0, 10) !== date) continue;
+    if (session.review_status === "ignored") continue;
+    if (!session.task_id) continue;
+    if (session.active_duration_minutes <= 0) continue;
+
+    const key = `${session.client_id ?? "none"}:${session.service_id ?? "none"}:${session.task_id}:${session.billable_status}`;
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.duration_minutes += session.active_duration_minutes;
+    } else {
+      groups.set(key, {
+        consultant_id: consultantId,
+        client_id: session.client_id,
+        service_id: session.service_id,
+        task_id: session.task_id,
+        work_type_id: session.work_type_id,
+        billable_status: session.billable_status,
+        session_id: session.id,
+        date,
+        duration_minutes: session.active_duration_minutes,
       });
     }
   }

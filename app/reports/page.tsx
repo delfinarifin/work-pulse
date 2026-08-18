@@ -1,11 +1,22 @@
 import { listReportRows } from "@/lib/data/reports";
 import { listConsultants } from "@/lib/data/consultants";
 import { listWorkTypes } from "@/lib/data/work-types";
+import { listServices } from "@/lib/data/services";
 import ReportFiltersForm from "@/components/ReportFiltersForm";
+
+const BILLABLE_LABELS: Record<string, string> = {
+  billable: "Billable",
+  non_billable: "Non-billable",
+  internal: "Internal",
+  training: "Training",
+  administration: "Administration",
+};
 
 type SearchParams = {
   consultant?: string;
   workType?: string;
+  service?: string;
+  billable?: string;
   start?: string;
   end?: string;
 };
@@ -16,22 +27,29 @@ export default async function ReportsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const [rows, consultants, workTypes] = await Promise.all([
+  const [rows, consultants, workTypes, services] = await Promise.all([
     listReportRows({
       consultantId: params.consultant || undefined,
       workTypeId: params.workType || undefined,
+      serviceId: params.service || undefined,
+      billableStatus: params.billable || undefined,
       startDate: params.start || undefined,
       endDate: params.end || undefined,
     }),
     listConsultants(),
     listWorkTypes(),
+    listServices(),
   ]);
 
   const totalMinutes = rows.reduce((sum, r) => sum + r.duration_minutes, 0);
+  const billableMinutes = rows
+    .filter((r) => r.billable_status === "billable")
+    .reduce((sum, r) => sum + r.duration_minutes, 0);
 
   const byConsultant = new Map<string, { name: string; minutes: number }>();
-  const byWorkType = new Map<string, number>();
+  const byService = new Map<string, number>();
   const byJobRole = new Map<string, number>();
+  const byBillableStatus = new Map<string, number>();
 
   for (const row of rows) {
     const c = byConsultant.get(row.consultant_id) ?? {
@@ -41,13 +59,14 @@ export default async function ReportsPage({
     c.minutes += row.duration_minutes;
     byConsultant.set(row.consultant_id, c);
 
-    byWorkType.set(
-      row.work_type_name,
-      (byWorkType.get(row.work_type_name) ?? 0) + row.duration_minutes,
-    );
+    const serviceLabel = row.service_name ?? row.work_type_name;
+    byService.set(serviceLabel, (byService.get(serviceLabel) ?? 0) + row.duration_minutes);
 
     const role = row.job_role ?? "Unassigned";
     byJobRole.set(role, (byJobRole.get(role) ?? 0) + row.duration_minutes);
+
+    const billableLabel = BILLABLE_LABELS[row.billable_status] ?? row.billable_status;
+    byBillableStatus.set(billableLabel, (byBillableStatus.get(billableLabel) ?? 0) + row.duration_minutes);
   }
 
   return (
@@ -55,11 +74,11 @@ export default async function ReportsPage({
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
         <p className="text-sm text-neutral-500">
-          Time spent by consultant, job role, and work type.
+          Time spent by consultant, job role, service, and billable status.
         </p>
       </div>
 
-      <ReportFiltersForm consultants={consultants} workTypes={workTypes} />
+      <ReportFiltersForm consultants={consultants} workTypes={workTypes} services={services} />
 
       {rows.length === 0 ? (
         <div className="rounded-lg border border-dashed border-neutral-300 p-10 text-center">
@@ -69,12 +88,18 @@ export default async function ReportsPage({
         </div>
       ) : (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
             <div className="rounded-lg border border-neutral-200 p-4">
               <div className="text-2xl font-bold tracking-tight">
                 {totalMinutes}
               </div>
               <div className="text-sm text-neutral-500">Total minutes</div>
+            </div>
+            <div className="rounded-lg border border-neutral-200 p-4">
+              <div className="text-2xl font-bold tracking-tight">
+                {billableMinutes}
+              </div>
+              <div className="text-sm text-neutral-500">Billable minutes</div>
             </div>
             <div className="rounded-lg border border-neutral-200 p-4">
               <div className="text-2xl font-bold tracking-tight">
@@ -94,7 +119,8 @@ export default async function ReportsPage({
             Array.from(byConsultant.values()).map((c) => [c.name, c.minutes] as [string, number])
           } />
           <ReportBreakdown title="By job role" data={Array.from(byJobRole.entries())} />
-          <ReportBreakdown title="By work type" data={Array.from(byWorkType.entries())} />
+          <ReportBreakdown title="By service" data={Array.from(byService.entries())} />
+          <ReportBreakdown title="By billable status" data={Array.from(byBillableStatus.entries())} />
 
           <div className="overflow-x-auto rounded-lg border border-neutral-200">
             <table className="w-full text-sm">
@@ -104,7 +130,9 @@ export default async function ReportsPage({
                   <th className="px-4 py-2 font-medium">Consultant</th>
                   <th className="px-4 py-2 font-medium">Job Role</th>
                   <th className="px-4 py-2 font-medium">Client</th>
-                  <th className="px-4 py-2 font-medium">Work Type</th>
+                  <th className="px-4 py-2 font-medium">Service</th>
+                  <th className="px-4 py-2 font-medium">Task</th>
+                  <th className="px-4 py-2 font-medium">Billable</th>
                   <th className="px-4 py-2 font-medium">Minutes</th>
                   <th className="px-4 py-2 font-medium">Source</th>
                 </tr>
@@ -123,7 +151,13 @@ export default async function ReportsPage({
                       {row.client_name ?? "—"}
                     </td>
                     <td className="px-4 py-2.5 text-neutral-600">
-                      {row.work_type_name}
+                      {row.service_name ?? row.work_type_name}
+                    </td>
+                    <td className="px-4 py-2.5 text-neutral-600">
+                      {row.task_name ?? "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-neutral-600">
+                      {BILLABLE_LABELS[row.billable_status] ?? row.billable_status}
                     </td>
                     <td className="px-4 py-2.5 text-neutral-600">
                       {row.duration_minutes}m

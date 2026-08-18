@@ -8,8 +8,10 @@ import { signOut } from "@/app/login/actions";
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
   { href: "/activities/new", label: "Log Activity" },
+  { href: "/activities", label: "Activity Log" },
   { href: "/timesheets", label: "My Timesheets" },
   { href: "/reports", label: "Reports" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export default function Sidebar({ userEmail }: { userEmail: string | null }) {
@@ -80,8 +82,7 @@ function NavLinks({
     <div className="flex flex-col gap-4">
       <ul className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
-          const active =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          const active = pathname === item.href;
           return (
             <li key={item.href}>
               <Link
