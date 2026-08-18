@@ -110,22 +110,26 @@ export async function updateActivitySession(
 export async function deleteActivitySession(id: string): Promise<void> {
   const supabase = await createClient();
 
-  // timesheet_entries.session_id and activity_events.session_id both FK into
-  // this table with no ON DELETE behavior (default RESTRICT) — break the
-  // reference first, or Postgres rejects the delete with a foreign-key
-  // violation. The caller's aggregation re-run afterward cleans up any now-
-  // orphaned timesheet_entries row.
-  const { error: unlinkTimesheetsError } = await supabase
-    .from("timesheet_entries")
-    .update({ session_id: null })
-    .eq("session_id", id);
-  if (unlinkTimesheetsError) throw unlinkTimesheetsError;
-
-  const { error: unlinkEventsError } = await supabase
-    .from("activity_events")
-    .update({ session_id: null })
-    .eq("session_id", id);
-  if (unlinkEventsError) throw unlinkEventsError;
+  // Every table that FKs into activity_sessions, with no ON DELETE behavior
+  // specified (Postgres default RESTRICT) — each one blocks the delete until
+  // its reference is broken. Nullable FK columns get nulled; NOT NULL ones
+  // (idle_periods, activity_classifications — unpopulated in Phase 1, but
+  // schema-ready for the agent) have their rows deleted outright, since
+  // there's no valid non-null value to fall back to. The caller's
+  // aggregation re-run afterward cleans up any now-orphaned timesheet_entries
+  // row.
+  const unlinkOps = [
+    supabase.from("timesheet_entries").update({ session_id: null }).eq("session_id", id),
+    supabase.from("activity_events").update({ session_id: null }).eq("session_id", id),
+    supabase.from("activity_learning_rules").update({ source_session_id: null }).eq("source_session_id", id),
+    supabase.from("activity_sessions").update({ merged_into_session_id: null }).eq("merged_into_session_id", id),
+    supabase.from("idle_periods").delete().eq("session_id", id),
+    supabase.from("activity_classifications").delete().eq("session_id", id),
+  ];
+  for (const op of unlinkOps) {
+    const { error } = await op;
+    if (error) throw error;
+  }
 
   const { error } = await supabase.from("activity_sessions").delete().eq("id", id);
   if (error) throw error;
