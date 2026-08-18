@@ -2,15 +2,13 @@
 
 import { useActionState } from "react";
 import { logActivity, type LogActivityState } from "@/app/activities/new/actions";
-import type { Client, Consultant } from "@/lib/types";
+import type { Client } from "@/lib/types";
 
 const initialState: LogActivityState = { error: null };
 
 export default function ActivityForm({
-  consultants,
   clients,
 }: {
-  consultants: Consultant[];
   clients: Client[];
 }) {
   const [state, formAction, pending] = useActionState(
@@ -28,28 +26,6 @@ export default function ActivityForm({
           {state.error}
         </p>
       )}
-
-      <div className="space-y-1">
-        <label htmlFor="consultant_id" className="text-sm font-medium">
-          Consultant
-        </label>
-        <select
-          id="consultant_id"
-          name="consultant_id"
-          required
-          defaultValue=""
-          className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
-        >
-          <option value="" disabled>
-            Select a consultant
-          </option>
-          {consultants.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
 
       <div className="space-y-1">
         <label htmlFor="client_id" className="text-sm font-medium">

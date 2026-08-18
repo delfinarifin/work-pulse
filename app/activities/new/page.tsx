@@ -1,12 +1,8 @@
 import ActivityForm from "@/components/ActivityForm";
-import { listConsultants } from "@/lib/data/consultants";
 import { listClients } from "@/lib/data/clients";
 
 export default async function NewActivityPage() {
-  const [consultants, clients] = await Promise.all([
-    listConsultants(),
-    listClients(),
-  ]);
+  const clients = await listClients();
 
   return (
     <div className="space-y-6">
@@ -16,7 +12,7 @@ export default async function NewActivityPage() {
           Simulate the tracker agent by logging a file-activity event.
         </p>
       </div>
-      <ActivityForm consultants={consultants} clients={clients} />
+      <ActivityForm clients={clients} />
     </div>
   );
 }

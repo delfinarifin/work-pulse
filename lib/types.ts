@@ -33,6 +33,7 @@ export type ActivityEvent = {
   review_status: string;
   started_at: string;
   ended_at: string | null;
+  user_id: string | null;
   created_at: string;
 };
 

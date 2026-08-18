@@ -21,9 +21,13 @@ export async function insertActivityEvent(
   event: NewActivityEvent,
 ): Promise<ActivityEventWithJoins> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data, error } = await supabase
     .from("activity_events")
-    .insert(event)
+    .insert({ ...event, user_id: user?.id ?? null })
     .select(EVENT_SELECT)
     .single();
 

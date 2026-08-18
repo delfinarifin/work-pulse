@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { insertActivityEvent } from "@/lib/data/activity-events";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 import { listWorkTypes } from "@/lib/data/work-types";
+import { getCurrentConsultant } from "@/lib/data/consultants";
 import { runAggregationForConsultantDate } from "@/lib/data/timesheets";
 import { classifyActivity } from "@/lib/logic/classify";
 
@@ -15,15 +16,11 @@ export async function logActivity(
   _prevState: LogActivityState,
   formData: FormData,
 ): Promise<LogActivityState> {
-  const consultant_id = String(formData.get("consultant_id") ?? "");
   const client_id = String(formData.get("client_id") ?? "").trim();
   const file_name = String(formData.get("file_name") ?? "").trim();
   const started_at = String(formData.get("started_at") ?? "");
   const ended_at = String(formData.get("ended_at") ?? "");
 
-  if (!consultant_id) {
-    return { error: "Consultant is required." };
-  }
   if (!file_name) {
     return { error: "File name is required." };
   }
@@ -42,11 +39,16 @@ export async function logActivity(
 
   let event;
   try {
+    const consultant = await getCurrentConsultant();
+    if (!consultant) {
+      return { error: "You must be signed in to log activity." };
+    }
+
     const workTypes = await listWorkTypes();
     const classification = classifyActivity(file_name, workTypes);
 
     event = await insertActivityEvent({
-      consultant_id,
+      consultant_id: consultant.id,
       client_id: client_id || null,
       file_name,
       event_type: "edit",
@@ -69,7 +71,7 @@ export async function logActivity(
     });
 
     await runAggregationForConsultantDate(
-      consultant_id,
+      consultant.id,
       startDate.toISOString().slice(0, 10),
     );
   } catch {

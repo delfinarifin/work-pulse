@@ -30,12 +30,19 @@
 
 ## Sprint 4 — Lock It Down (auth + RLS)
 **Goal:** Per-user authentication and data isolation.
-- [ ] Supabase Auth (signup/login)
-- [ ] Replace permissive RLS with owner-scoped policies
-- [ ] Consultant can only see/edit own entries
-- [ ] Manager role can read all, write approvals
-- [ ] Admin role can manage config
-**DoD:** Two logged-in consultants see only their own timesheet entries; anonymous visitors are redirected to login.
+- [x] Supabase Auth (signup/login) — `/login`, `/signup`, `app/login/actions.ts`
+- [x] Replace permissive RLS with owner-scoped policies (`0003_lock_down.sql`)
+- [x] Consultant can only see/edit own entries — a consultant row IS the signed-in user's identity, created on first access (`getCurrentConsultant`)
+- [x] Anonymous visitors are redirected to `/login` (middleware); signed-in visitors hitting `/login` or `/signup` are redirected to `/`
+- [ ] Manager role can read all, write approvals — no role system yet, deferred
+- [ ] Admin role can manage config — deferred
+**DoD:** Two logged-in consultants see only their own timesheet entries; anonymous visitors are redirected to login. ✅ Done for the single-role case — manager/admin cross-visibility is a later increment.
+
+**Note:** requires `supabase/migrations/0003_lock_down.sql` to be applied to the
+database before deploying the app code that depends on it (adds
+`activity_events.user_id` + swaps RLS policies) — schema and app code must land
+together, never app-code-ahead-of-schema (see incident notes in git history
+around commit `e19b5d0`).
 
 ## Sprint 5 — Approval Workflow + AI Classify (later)
 **Goal:** Manager approval flow + AI work-type suggestions.

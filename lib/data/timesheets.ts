@@ -30,6 +30,9 @@ export async function runAggregationForConsultantDate(
   date: string,
 ): Promise<void> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const [events, existingRes] = await Promise.all([
     listActivityEventsForConsultantOnDate(consultantId, date),
@@ -69,6 +72,7 @@ export async function runAggregationForConsultantDate(
         date: group.date,
         duration_minutes: group.duration_minutes,
         source: "auto",
+        user_id: user?.id ?? null,
       });
       if (error) throw error;
       createdCount += 1;

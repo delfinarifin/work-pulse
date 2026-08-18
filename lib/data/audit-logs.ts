@@ -7,6 +7,12 @@ export async function writeAuditLog(entry: {
   details?: Record<string, unknown>;
 }): Promise<void> {
   const supabase = await createClient();
-  const { error } = await supabase.from("audit_logs").insert(entry);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await supabase
+    .from("audit_logs")
+    .insert({ ...entry, user_id: user?.id ?? null });
   if (error) throw error;
 }

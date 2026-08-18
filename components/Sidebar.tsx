@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { signOut } from "@/app/login/actions";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
@@ -11,7 +12,7 @@ const NAV_ITEMS = [
   { href: "/reports", label: "Reports" },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ userEmail }: { userEmail: string | null }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -36,7 +37,7 @@ export default function Sidebar() {
           id="mobile-nav"
           className="md:hidden border-b border-neutral-200 px-2 py-2"
         >
-          <NavLinks pathname={pathname} onNavigate={() => setOpen(false)} />
+          <NavLinks pathname={pathname} userEmail={userEmail} onNavigate={() => setOpen(false)} />
         </nav>
       )}
 
@@ -44,7 +45,7 @@ export default function Sidebar() {
         <div className="px-3 pb-6 font-semibold tracking-tight text-lg">
           Work Pulse
         </div>
-        <NavLinks pathname={pathname} />
+        <NavLinks pathname={pathname} userEmail={userEmail} />
       </aside>
     </>
   );
@@ -52,33 +53,65 @@ export default function Sidebar() {
 
 function NavLinks({
   pathname,
+  userEmail,
   onNavigate,
 }: {
   pathname: string;
+  userEmail: string | null;
   onNavigate?: () => void;
 }) {
+  if (!userEmail) {
+    return (
+      <ul className="flex flex-col gap-1">
+        <li>
+          <Link
+            href="/login"
+            onClick={onNavigate}
+            className="block rounded-md px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
+          >
+            Sign in
+          </Link>
+        </li>
+      </ul>
+    );
+  }
+
   return (
-    <ul className="flex flex-col gap-1">
-      {NAV_ITEMS.map((item) => {
-        const active =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-        return (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              onClick={onNavigate}
-              aria-current={active ? "page" : undefined}
-              className={`block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-700 hover:bg-neutral-100"
-              }`}
-            >
-              {item.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="flex flex-col gap-4">
+      <ul className="flex flex-col gap-1">
+        {NAV_ITEMS.map((item) => {
+          const active =
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                onClick={onNavigate}
+                aria-current={active ? "page" : undefined}
+                className={`block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                  active
+                    ? "bg-neutral-900 text-white"
+                    : "text-neutral-700 hover:bg-neutral-100"
+                }`}
+              >
+                {item.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="border-t border-neutral-200 px-3 pt-4 space-y-2">
+        <p className="text-xs text-neutral-500 truncate">{userEmail}</p>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="text-sm font-medium text-neutral-700 hover:text-neutral-900"
+          >
+            Sign out
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
