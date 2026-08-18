@@ -109,6 +109,24 @@ export async function updateActivitySession(
 
 export async function deleteActivitySession(id: string): Promise<void> {
   const supabase = await createClient();
+
+  // timesheet_entries.session_id and activity_events.session_id both FK into
+  // this table with no ON DELETE behavior (default RESTRICT) — break the
+  // reference first, or Postgres rejects the delete with a foreign-key
+  // violation. The caller's aggregation re-run afterward cleans up any now-
+  // orphaned timesheet_entries row.
+  const { error: unlinkTimesheetsError } = await supabase
+    .from("timesheet_entries")
+    .update({ session_id: null })
+    .eq("session_id", id);
+  if (unlinkTimesheetsError) throw unlinkTimesheetsError;
+
+  const { error: unlinkEventsError } = await supabase
+    .from("activity_events")
+    .update({ session_id: null })
+    .eq("session_id", id);
+  if (unlinkEventsError) throw unlinkEventsError;
+
   const { error } = await supabase.from("activity_sessions").delete().eq("id", id);
   if (error) throw error;
 }
