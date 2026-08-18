@@ -76,6 +76,12 @@ export function aggregateActivitySessions(
     if (session.started_at.slice(0, 10) !== date) continue;
     if (session.review_status === "ignored") continue;
     if (!session.task_id) continue;
+    // timesheet_entries.work_type_id is NOT NULL — a session can have a
+    // task_id (task matched) but no work_type_id (no service matched, or
+    // the matched service has no default_work_type_id, e.g. "Corporate
+    // Services"/"Other"). Skip until it has both; Change lets the
+    // consultant supply a service, which re-bridges work_type_id.
+    if (!session.work_type_id) continue;
     if (session.active_duration_minutes <= 0) continue;
 
     const key = `${session.client_id ?? "none"}:${session.service_id ?? "none"}:${session.task_id}:${session.billable_status}`;

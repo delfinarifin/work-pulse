@@ -94,7 +94,7 @@ export async function classifySession(
   };
 }
 
-async function bridgeWorkTypeId(
+export async function bridgeWorkTypeId(
   supabase: SupabaseClient,
   serviceId: string | null,
 ): Promise<string | null> {

@@ -6,7 +6,7 @@ import { insertActivitySession } from "@/lib/data/sessions";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 import { getCurrentConsultant } from "@/lib/data/consultants";
 import { runSessionAggregationForConsultantDate } from "@/lib/data/timesheets";
-import { classifySession, type ClassifySessionResult } from "@/lib/classification/classifySession";
+import { classifySession, bridgeWorkTypeId, type ClassifySessionResult } from "@/lib/classification/classifySession";
 
 export type LogActivityState = {
   error: string | null;
@@ -89,6 +89,14 @@ export async function logActivity(
       (!!service_id && service_id !== classification.serviceId) ||
       (!!task_id && task_id !== classification.taskId);
 
+    // Re-bridge work_type_id for the FINAL service (the human's pick, if
+    // they overrode the suggestion) — reusing classification.workTypeId
+    // here would silently point at the wrong (or no) work type.
+    const finalWorkTypeId =
+      finalServiceId === classification.serviceId
+        ? classification.workTypeId
+        : await bridgeWorkTypeId(supabase, finalServiceId);
+
     // High-confidence suggestions the consultant didn't touch are treated as
     // already reviewed — no need to ask them to confirm what they just saw
     // and accepted by submitting. Low-confidence ones still need a
@@ -104,7 +112,7 @@ export async function logActivity(
       client_id: finalClientId,
       service_id: finalServiceId,
       task_id: finalTaskId,
-      work_type_id: classification.workTypeId,
+      work_type_id: finalWorkTypeId,
       billable_status:
         (billable_status as typeof classification.billableStatus) ||
         classification.billableStatus,

@@ -5,6 +5,8 @@ import { getActivitySession, updateActivitySession, deleteActivitySession } from
 import { runSessionAggregationForConsultantDate } from "@/lib/data/timesheets";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 import { recordCorrection } from "@/lib/data/learning-rules";
+import { bridgeWorkTypeId } from "@/lib/classification/classifySession";
+import { createClient } from "@/lib/supabase/server";
 import type { BillableStatus } from "@/lib/types";
 
 function revalidateAll() {
@@ -83,10 +85,20 @@ export async function changeSessionAction(formData: FormData): Promise<void> {
     ? (billable_status as BillableStatus)
     : "billable";
 
+  // Re-bridge work_type_id for the corrected service — without this, a
+  // session that only ever matched a task (no service) stays permanently
+  // excluded from timesheet aggregation even after the consultant supplies
+  // the missing service via Change.
+  const workTypeId =
+    service_id === session.service_id
+      ? session.work_type_id
+      : await bridgeWorkTypeId(await createClient(), service_id);
+
   await updateActivitySession(id, {
     client_id,
     service_id,
     task_id,
+    work_type_id: workTypeId,
     billable_status: resolvedBillable,
     review_status: "changed",
   });
