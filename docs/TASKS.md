@@ -164,10 +164,38 @@ read surface is schema/RLS-ready but has no page yet.
 **Note:** requires `supabase/migrations/0009_work_journal.sql` to be applied before deploying —
 same schema-then-code-together rule as prior sprints.
 
-## Sprint 10+ — Profitability, Capacity, Recurring-Work (expanded scope)
+## Sprint 10 — Timesheet Auto-Generation + Approval Workflow
+**Goal:** Auto-generated draft submissions instead of the consultant assembling one by hand;
+manager approve/reject/reopen with locked entries in between. Hard-depends on the role system
+(Sprint 6). See `docs/ARCHITECTURE_EXPANSION.md` item 5, `docs/AGENTIC_LAYER.md`.
+- [x] `timesheet_submissions` table + `timesheet_entries.submission_id` nullable FK
+- [x] "Generate this week's draft" pulls in already-aggregated entries for the period
+  (`attachPeriodEntriesToDraft`) — re-running it just picks up anything new since last call
+- [x] Submit (draft/rejected → submitted): owner-only, enforced by
+  `enforce_submission_status_transition` trigger — a consultant cannot self-approve
+- [x] Approve / Reject (with required reason) / Reopen (with required, audit-logged reason):
+  manager/admin only, `/approvals` page
+- [x] `enforce_entry_immutability` trigger blocks edit/delete on any entry attached to a
+  submitted/approved/locked submission; `runSessionAggregationForConsultantDate` was updated to
+  skip (not attempt-then-fail on) locked entries; Timesheets UI hides Edit/Delete and shows
+  "Locked" instead
+- [x] Sidebar shows "Approvals" only for manager/admin (role plumbed through `app/layout.tsx`)
+- [ ] Auto-generation is manual-trigger only ("Generate this week's draft" button) — no
+  scheduled/automatic weekly draft creation yet (would need a cron-triggered route, not built)
+- [ ] Only the current week is exposed in the UI for drafting; past/future periods aren't
+  pickable from the Timesheets page (the data layer takes arbitrary period_start/period_end,
+  so this is a UI gap, not a schema one)
+**DoD:** A consultant generates this week's draft, submits it; a manager sees it in the pending
+queue, approves or rejects with a reason; approved entries can't be edited until a manager
+reopens with a reason, which is audit-logged. ✅ Done.
+
+**Note:** requires `supabase/migrations/0010_timesheet_submissions.sql` to be applied before
+deploying — same schema-then-code-together rule as prior sprints.
+
+## Sprint 11+ — Profitability, Capacity, Recurring-Work (expanded scope)
 Not started. Full assessment and recommended order in `docs/ARCHITECTURE_EXPANSION.md`:
-timesheet auto-generation + approval → profitability + capacity planning (parallel, both build
-on engagements) → recurring-work detection (wants real historical data, do last).
+profitability + capacity planning (parallel, both build on engagements) → recurring-work
+detection (wants real historical data, do last).
 
 ## Desktop Agent — still deferred
 Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
@@ -189,8 +217,9 @@ S6 ████████  Role System (consultant/manager/admin) — expanded
 S7 ░░░░░░░░  Approval Workflow + Live Dashboards + AI + Graph (later)
 S8 ████████  Engagements — expanded scope
 S9 ████████  Work Journal — expanded scope
-S10+░░░░░░░  Profitability, Capacity, Recurring-Work (expanded scope)
+S10 ████████  Timesheet Auto-Generation + Approval Workflow — expanded scope
+S11+░░░░░░░  Profitability, Capacity, Recurring-Work (expanded scope)
     ░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
-**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 9 — work journal
-live; profitability/capacity/recurring-work still queued.
+**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 10 — approval
+workflow live; profitability/capacity/recurring-work still queued.

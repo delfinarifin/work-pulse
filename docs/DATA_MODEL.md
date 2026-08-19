@@ -311,6 +311,36 @@ often auto-populated). No dependency on engagements (0009; see
 `work_journal_entries_manager_read` RLS policy grants managers/admins read on any entry marked
 above `'private'`.
 
+## timesheet_submissions
+Weekly (or any-period) rollup a consultant submits for manager approval. Auto-generation pulls
+in already-aggregated `timesheet_entries` rather than the consultant assembling one by hand
+(0010; see `docs/ARCHITECTURE_EXPANSION.md` item 5, `docs/AGENTIC_LAYER.md` submit/reopen spec).
+Hard-depends on the role system (0007).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| period_start, period_end | date not null |
+| status | text ('draft' / 'submitted' / 'approved' / 'rejected' / 'locked') |
+| submitted_at, reviewed_at | timestamptz nullable |
+| reviewed_by | uuid nullable → consultants |
+| rejection_reason | text nullable |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+`timesheet_entries.submission_id` is a nullable FK into this table. Once attached and the
+submission reaches `submitted`/`approved`/`locked`, that entry is immutable — enforced by the
+`enforce_entry_immutability` trigger on `timesheet_entries` (backstop; app code, specifically
+`runSessionAggregationForConsultantDate`, already skips touching locked entries rather than
+relying on the trigger to reject the attempt). Reopening a submission (back to `draft`) is the
+only way to unlock its entries again.
+
+Status transitions are guarded by the `enforce_submission_status_transition` trigger, same
+self-escalation-prevention pattern as `consultants.role` (0007): a non-manager caller (the
+submission's own owner) may only move `draft`/`rejected` → `submitted`; every other transition
+(approve, reject, reopen, lock) requires the caller to already be manager/admin. `reopen` always
+requires and audit-logs a reason, per `docs/AGENTIC_LAYER.md`.
+
 ## RLS Notes
 - **Owner-scoped** (`auth.uid() = user_id`), **+ manager/admin broadened read**: consultants,
   activity_sessions, idle_periods, activity_events, activity_classifications,
@@ -318,6 +348,11 @@ above `'private'`.
 - **Owner-scoped, + manager/admin read only when the author opted in**: work_journal_entries
   (`visibility <> 'private'`) — the one table where the broadened read is conditional on the
   row's own data, not blanket.
+- **Owner-scoped, + manager/admin broadened read AND write**: timesheet_submissions — the one
+  table where managers get write (not just read) beyond their own rows, since approving/
+  rejecting/reopening someone else's submission is the entire point of the feature. The owner's
+  own write stays limited to the `draft`/`rejected` → `submitted` transition via the
+  `enforce_submission_status_transition` trigger.
 - **Shared reference data, authenticated-read, admin-write**: clients (still also plain
   authenticated-write, pre-existing — not yet tightened to admin-only), work_types, services,
   tasks, service_mappings, task_mappings, client_file_mappings, billable_task_rules.

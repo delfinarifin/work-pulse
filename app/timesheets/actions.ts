@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { deleteTimesheetEntry, editTimesheetEntry } from "@/lib/data/timesheets";
+import { getCurrentConsultant } from "@/lib/data/consultants";
+import {
+  attachPeriodEntriesToDraft,
+  getOrCreateDraftSubmission,
+  submitSubmission,
+} from "@/lib/data/timesheet-submissions";
 import { createClient } from "@/lib/supabase/server";
 import type { BillableStatus } from "@/lib/types";
 
@@ -66,4 +72,31 @@ export async function deleteEntryAction(formData: FormData): Promise<void> {
   revalidatePath("/timesheets");
   revalidatePath("/");
   revalidatePath("/reports");
+}
+
+// Generates (or refreshes) the draft submission for one period: creates it
+// if it doesn't exist, then pulls in every not-yet-submitted entry in that
+// date range. Safe to call repeatedly — already-attached entries are
+// excluded by the submission_id is null filter, so re-running just picks
+// up anything new since the last call.
+export async function generateDraftSubmissionAction(formData: FormData): Promise<void> {
+  const periodStart = String(formData.get("period_start") ?? "");
+  const periodEnd = String(formData.get("period_end") ?? "");
+  if (!periodStart || !periodEnd) return;
+
+  const consultant = await getCurrentConsultant();
+  if (!consultant) return;
+
+  const submission = await getOrCreateDraftSubmission(consultant.id, periodStart, periodEnd);
+  await attachPeriodEntriesToDraft(submission.id, consultant.id, periodStart, periodEnd);
+
+  revalidatePath("/timesheets");
+}
+
+export async function submitDraftSubmissionAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  if (!id) return;
+
+  await submitSubmission(id);
+  revalidatePath("/timesheets");
 }

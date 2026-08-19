@@ -9,6 +9,8 @@ const SOURCE_STYLES: Record<string, string> = {
   manual: "bg-amber-50 text-amber-700",
 };
 
+const LOCKED_STATUSES = new Set(["submitted", "approved", "locked"]);
+
 const BILLABLE_LABELS: Record<BillableStatus, string> = {
   billable: "Billable",
   non_billable: "Non-billable",
@@ -48,7 +50,9 @@ export default function TimesheetTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
-          {entries.map((entry) => (
+          {entries.map((entry) => {
+          const locked = !!entry.submission && LOCKED_STATUSES.has(entry.submission.status);
+          return (
             <tr key={entry.id}>
               <td className="px-4 py-2.5 text-neutral-600">{entry.date}</td>
               <td className="px-4 py-2.5 font-medium">
@@ -167,6 +171,10 @@ export default function TimesheetTable({
                       </button>
                     </div>
                   </form>
+                ) : locked ? (
+                  <span className="text-xs text-neutral-400" title="Part of a submitted/approved timesheet — reopen it to edit.">
+                    Locked ({entry.submission?.status})
+                  </span>
                 ) : (
                   <div className="flex items-center gap-2">
                     <button
@@ -194,7 +202,7 @@ export default function TimesheetTable({
                 )}
               </td>
             </tr>
-          ))}
+          );})}
         </tbody>
       </table>
     </div>

@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/data/audit-logs";
 import { aggregateActivityEvents, aggregateActivitySessions } from "@/lib/logic/aggregation";
 
 const ENTRY_SELECT =
-  "*, consultant:consultants(id, name, job_role), client:clients(id, name), engagement:engagements(id, name), work_type:work_types(id, name, category), service:services(id, name), task:tasks(id, name)";
+  "*, consultant:consultants(id, name, job_role), client:clients(id, name), engagement:engagements(id, name), work_type:work_types(id, name, category), service:services(id, name), task:tasks(id, name), submission:timesheet_submissions(id, status)";
 
 export async function listTimesheetEntries(): Promise<
   TimesheetEntryWithJoins[]
@@ -114,7 +114,7 @@ export async function runSessionAggregationForConsultantDate(
     listActivitySessionsForConsultantOnDate(consultantId, date),
     supabase
       .from("timesheet_entries")
-      .select("id, client_id, engagement_id, service_id, task_id, billable_status, source")
+      .select("id, client_id, engagement_id, service_id, task_id, billable_status, source, submission_id")
       .eq("consultant_id", consultantId)
       .eq("date", date),
   ]);
@@ -137,8 +137,12 @@ export async function runSessionAggregationForConsultantDate(
   // An existing auto entry whose key no longer has any backing session
   // (the session that created it was ignored, deleted, or merged away) is
   // now orphaned — remove it rather than leaving stale billable minutes.
+  // Skip anything already attached to a submission: it's locked (enforced
+  // by the enforce_entry_immutability trigger too — this check just avoids
+  // hitting that trigger from normal aggregation), stays frozen until the
+  // submission is reopened.
   for (const [key, existing] of existingByKey) {
-    if (existing.source === "auto" && !groupKeys.has(key)) {
+    if (existing.source === "auto" && !existing.submission_id && !groupKeys.has(key)) {
       const { error } = await supabase.from("timesheet_entries").delete().eq("id", existing.id);
       if (error) throw error;
     }
@@ -147,6 +151,12 @@ export async function runSessionAggregationForConsultantDate(
   for (const group of groups) {
     const key = `${group.client_id ?? "none"}:${group.engagement_id ?? "none"}:${group.service_id ?? "none"}:${group.task_id}:${group.billable_status}`;
     const existing = existingByKey.get(key);
+
+    if (existing?.submission_id) {
+      // Locked into a submitted/approved timesheet — further activity on
+      // this date doesn't retroactively change what was submitted.
+      continue;
+    }
 
     if (!existing) {
       const { error } = await supabase.from("timesheet_entries").insert({

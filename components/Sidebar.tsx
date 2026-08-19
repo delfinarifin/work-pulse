@@ -16,7 +16,15 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Settings" },
 ];
 
-export default function Sidebar({ userEmail }: { userEmail: string | null }) {
+const MANAGER_NAV_ITEMS = [{ href: "/approvals", label: "Approvals" }];
+
+export default function Sidebar({
+  userEmail,
+  isManagerOrAdmin,
+}: {
+  userEmail: string | null;
+  isManagerOrAdmin?: boolean;
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -41,7 +49,12 @@ export default function Sidebar({ userEmail }: { userEmail: string | null }) {
           id="mobile-nav"
           className="md:hidden border-b border-neutral-200 px-2 py-2"
         >
-          <NavLinks pathname={pathname} userEmail={userEmail} onNavigate={() => setOpen(false)} />
+          <NavLinks
+            pathname={pathname}
+            userEmail={userEmail}
+            isManagerOrAdmin={isManagerOrAdmin}
+            onNavigate={() => setOpen(false)}
+          />
         </nav>
       )}
 
@@ -49,7 +62,7 @@ export default function Sidebar({ userEmail }: { userEmail: string | null }) {
         <div className="px-3 pb-6 font-semibold tracking-tight text-lg">
           Work Pulse
         </div>
-        <NavLinks pathname={pathname} userEmail={userEmail} />
+        <NavLinks pathname={pathname} userEmail={userEmail} isManagerOrAdmin={isManagerOrAdmin} />
       </aside>
     </>
   );
@@ -58,10 +71,12 @@ export default function Sidebar({ userEmail }: { userEmail: string | null }) {
 function NavLinks({
   pathname,
   userEmail,
+  isManagerOrAdmin,
   onNavigate,
 }: {
   pathname: string;
   userEmail: string | null;
+  isManagerOrAdmin?: boolean;
   onNavigate?: () => void;
 }) {
   if (!userEmail) {
@@ -83,7 +98,7 @@ function NavLinks({
   return (
     <div className="flex flex-col gap-4">
       <ul className="flex flex-col gap-1">
-        {NAV_ITEMS.map((item) => {
+        {[...NAV_ITEMS, ...(isManagerOrAdmin ? MANAGER_NAV_ITEMS : [])].map((item) => {
           const active = pathname === item.href;
           return (
             <li key={item.href}>

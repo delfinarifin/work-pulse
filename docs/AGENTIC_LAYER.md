@@ -32,4 +32,10 @@
 
 ## v1 vs Later
 - **v1:** Auto-aggregation + manual entry CRUD + audit logging.
-- **Later:** Submit/approve workflow, AI work-type suggestions with confidence thresholds, automated weekly reports.
+- **Sprint 10 (expanded scope, live):** Submit/approve/reject/reopen workflow —
+  `lib/data/timesheet-submissions.ts` (`submitSubmission`, `approveSubmission`,
+  `rejectSubmission`, `reopenSubmission`), gated by the `enforce_submission_status_transition`
+  trigger (owner can only submit/resubmit; every other transition needs manager/admin) and the
+  `enforce_entry_immutability` trigger (locked entries can't be edited/deleted until reopened).
+- **Still later:** AI work-type suggestions with confidence thresholds, automated weekly
+  reports.

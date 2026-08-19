@@ -3,15 +3,33 @@ import { listTimesheetEntries } from "@/lib/data/timesheets";
 import { listWorkTypes } from "@/lib/data/work-types";
 import { listServices } from "@/lib/data/services";
 import { listTasks } from "@/lib/data/tasks";
+import { getCurrentConsultant } from "@/lib/data/consultants";
+import { listSubmissionsForConsultant } from "@/lib/data/timesheet-submissions";
 import TimesheetTable from "@/components/TimesheetTable";
+import WeeklySubmissionPanel from "@/components/WeeklySubmissionPanel";
+
+// Monday-start ISO week containing `date`.
+function currentWeekRange(date = new Date()): { start: string; end: string } {
+  const day = date.getUTCDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(date);
+  monday.setUTCDate(date.getUTCDate() + diffToMonday);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
+}
 
 export default async function TimesheetsPage() {
-  const [entries, workTypes, services, tasks] = await Promise.all([
+  const consultant = await getCurrentConsultant();
+  const [entries, workTypes, services, tasks, submissions] = await Promise.all([
     listTimesheetEntries(),
     listWorkTypes(),
     listServices(),
     listTasks(),
+    consultant ? listSubmissionsForConsultant(consultant.id) : Promise.resolve([]),
   ]);
+
+  const { start, end } = currentWeekRange();
 
   return (
     <div className="space-y-6">
@@ -22,6 +40,15 @@ export default async function TimesheetsPage() {
           entry.
         </p>
       </div>
+
+      {consultant && (
+        <WeeklySubmissionPanel
+          periodStart={start}
+          periodEnd={end}
+          submissions={submissions}
+          entries={entries}
+        />
+      )}
 
       {entries.length === 0 ? (
         <div className="rounded-lg border border-dashed border-neutral-300 p-10 text-center space-y-3">

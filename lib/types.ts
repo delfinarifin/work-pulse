@@ -229,6 +229,7 @@ export type TimesheetEntry = {
   task_id: string | null;
   billable_status: BillableStatus;
   session_id: string | null;
+  submission_id: string | null;
   date: string;
   duration_minutes: number;
   source: "auto" | "manual";
@@ -243,6 +244,7 @@ export type TimesheetEntryWithJoins = TimesheetEntry & {
   work_type: { id: string; name: string; category: string } | null;
   service: { id: string; name: string } | null;
   task: { id: string; name: string } | null;
+  submission: { id: string; status: SubmissionStatus } | null;
 };
 
 export type JournalVisibility = "private" | "manager" | "client";
@@ -262,6 +264,26 @@ export type WorkJournalEntryWithJoins = WorkJournalEntry & {
   consultant: { id: string; name: string } | null;
   engagement: { id: string; name: string } | null;
   client: { id: string; name: string } | null;
+};
+
+export type SubmissionStatus = "draft" | "submitted" | "approved" | "rejected" | "locked";
+
+export type TimesheetSubmission = {
+  id: string;
+  consultant_id: string;
+  period_start: string;
+  period_end: string;
+  status: SubmissionStatus;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+};
+
+export type TimesheetSubmissionWithJoins = TimesheetSubmission & {
+  consultant: { id: string; name: string; job_role: string } | null;
+  reviewer: { id: string; name: string } | null;
 };
 
 export type AuditLog = {
