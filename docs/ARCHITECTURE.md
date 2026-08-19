@@ -83,4 +83,4 @@ lib/
 | timesheet-approval | Auto-generated draft → submit → approve/reject/reopen | timesheet_submissions | Live (Sprint 10) |
 | profitability | Billed vs. cost vs. budget, by engagement/client | billing_rates | Live (Sprint 11) |
 | capacity | Weekly capacity vs. planned allocation vs. actual | consultant_capacity, resource_allocations | Live (Sprint 12) |
-| recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |
+| recurring-work | Detecting repeated client/task patterns | — | Descoped 2026-08-19 — repetition is normal consultant work, not a signal to flag |

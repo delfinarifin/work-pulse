@@ -240,12 +240,13 @@ over-allocation. ✅ Done.
 **Note:** requires `supabase/migrations/0012_capacity_planning.sql` to be applied before
 deploying — same schema-then-code-together rule as prior sprints.
 
-## Sprint 13+ — Recurring-Work Detection (expanded scope)
-Not started. Full assessment in `docs/ARCHITECTURE_EXPANSION.md` item 7 — the highest-
-uncertainty item on the original list: "what counts as recurring" is a real product decision
-(3 consecutive months? something looser?), worth a short explicit design pass before writing
-the detection query. Wants real historical data across several periods to be useful at all, so
-intentionally saved for last.
+## Recurring-Work Detection — descoped, not building
+Explicitly dropped from scope (2026-08-19), not just deferred — asked twice what should count
+as "recurring" (see `docs/ARCHITECTURE_EXPANSION.md` item 7 for the options that were on the
+table) and the answer was to skip it. A consultant repeating the same client/task pattern is
+normal, expected work — not a signal that needs flagging or surfacing back to them. No schema,
+no detection logic. If this changes later, item 7 in `docs/ARCHITECTURE_EXPANSION.md` still has
+the design options if anyone wants to revisit.
 
 ## Desktop Agent — still deferred
 Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
@@ -270,8 +271,9 @@ S9 ████████  Work Journal — expanded scope
 S10 ████████  Timesheet Auto-Generation + Approval Workflow — expanded scope
 S11 ████████  Profitability — expanded scope
 S12 ████████  Capacity Planning — expanded scope
-S13+░░░░░░░  Recurring-Work Detection (expanded scope)
+    ░░░░░░░  Recurring-Work Detection — descoped 2026-08-19, not building
     ░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
 **v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 12 — capacity
-planning live; recurring-work detection is the last item on the original expanded-scope list.
+planning live. That closes out the expanded-scope roadmap except the desktop agent (blocked on
+toolchain) and recurring-work detection (descoped by request).

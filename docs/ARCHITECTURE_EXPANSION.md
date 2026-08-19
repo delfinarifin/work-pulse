@@ -164,7 +164,12 @@ No dependency on anything else — could ship standalone, before or in parallel 
 sprint. `visibility='client'` implies a future client-facing view that doesn't exist yet
 (out of scope for now — just reserve the field so the migration doesn't need revisiting).
 
-## 7. Recurring-Work Detection
+## 7. Recurring-Work Detection — DESCOPED (2026-08-19)
+
+Asked the product owner what should count as "recurring" (options below were on the table);
+the answer was that a consultant repeating the same client/task pattern is normal, expected
+work, not a signal that needs flagging. Not building this. Left the original analysis below for
+reference in case this gets revisited later.
 
 Analytical, not transactional — mines historical `timesheet_entries` (or
 `activity_learning_rules`, which already captures "this pattern → this client/service/task")
