@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { ActivitySessionWithJoins, BillableStatus, ReviewStatus } from "@/lib/types";
 
@@ -57,11 +58,16 @@ export async function listActivitySessions(
   return (data ?? []) as unknown as ActivitySessionWithJoins[];
 }
 
+// Accepts an optional injected client so callers with no cookie session
+// (the agent API routes, which authenticate via device API key instead of
+// Supabase Auth) can pass a service-role client instead — normal callers
+// omit it and get the usual cookie-based one.
 export async function listActivitySessionsForConsultantOnDate(
   consultantId: string,
   date: string,
+  client?: SupabaseClient,
 ): Promise<ActivitySessionWithJoins[]> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const dayStart = `${date}T00:00:00.000Z`;
   const dayEnd = `${date}T23:59:59.999Z`;
   const { data, error } = await supabase

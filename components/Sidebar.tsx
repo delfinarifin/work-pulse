@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/activities", label: "Activity Log" },
   { href: "/engagements", label: "Engagements" },
   { href: "/journal", label: "Work Journal" },
+  { href: "/devices", label: "Devices" },
   { href: "/timesheets", label: "My Timesheets" },
   { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },

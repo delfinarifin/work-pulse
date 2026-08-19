@@ -149,7 +149,10 @@ export type Device = {
   device_name: string;
   platform: string | null;
   agent_version: string | null;
+  api_key_prefix: string | null;
   status: "pending" | "active" | "revoked";
+  pairing_code: string | null;
+  pairing_code_expires_at: string | null;
   last_seen_at: string | null;
   created_at: string;
 };

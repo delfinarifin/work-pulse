@@ -78,15 +78,46 @@ that would make capture fully hands-free).
 `0005_classification_engine.sql`, and `0006_timesheet_extensions.sql` to be applied before
 deploying — same schema-then-code-together rule as Sprint 4.
 
-## Sprint 6 — Desktop Agent (deferred, separate plan)
+## Desktop Agent — Milestone 1: web side (unblocked, in progress)
 **Goal:** True zero-input background capture — a Windows tray agent (Tauri) detecting active
-application/window/file metadata (never content), idle state, and syncing securely.
-Deferred because this sandbox has no Node/Rust/Tauri toolchain to build, test, or sign a native
-Windows binary, and no real Windows GUI session to verify tray/auto-start/idle-detection
-behavior. Schema is already shaped to receive it (`devices`, `activity_sessions.device_id`,
-`idle_periods`) — Sprint 6 needs no further migrations, just the agent source, the
-`app/api/agent/*` routes, `lib/supabase/service.ts` (first real use of
-`SUPABASE_SERVICE_ROLE_KEY`), and `lib/agent/auth.ts`. Not started.
+application/window/file metadata (never content) and idle state, syncing securely. The original
+"deferred, no Rust/Tauri toolchain" blocker no longer holds — Rust, the MSVC C++ Build Tools,
+and WebView2 are now installed on the machine this session runs on (verified with a real
+compile, 2026-08-19). `SUPABASE_SERVICE_ROLE_KEY` is provisioned in Vercel and pulled locally.
+- [x] `lib/supabase/service.ts` — service-role client, first real use of the key. Server-only,
+  never imported from a client component
+- [x] `lib/agent/auth.ts` — pairing-code generation, API-key generation/hashing (SHA-256,
+  key shown once at pairing time, only the hash is ever stored)
+- [x] `/devices` page — consultant generates a pairing code (10-minute TTL), lists their
+  devices with status/last-seen, revokes a device
+- [x] `POST /api/agent/pair` — exchanges a valid pairing code for a device API key (service
+  client; the pairing-code + status + expiry check IS the authorization, not RLS)
+- [x] `POST /api/agent/heartbeat` — the core capture loop: bearer-token device auth, then
+  `lib/data/agent-sessions.ts` (`recordHeartbeat`) upserts `activity_sessions` — extends the
+  active session if the window/file identity is unchanged, closes and classifies a new one
+  (reusing `classifySession`) if it changed, tracks idle spans in `idle_periods` and closes the
+  session at the consultant's configured idle threshold
+- [x] `listActivitySessionsForConsultantOnDate` / `runSessionAggregationForConsultantDate`
+  (`lib/data/sessions.ts` / `lib/data/timesheets.ts`) now accept an optional injected
+  `SupabaseClient` + `userId` — agent code passes the service client since it has no cookie
+  session; every existing caller is unaffected (both params optional, default to prior
+  cookie-based behavior)
+- [ ] **Native Tauri agent itself — not started.** Everything above is server-side; nothing yet
+  actually sends a heartbeat. This is Milestone 2.
+- [ ] Recomputes `active_duration_minutes` from wall-clock elapsed time on every heartbeat
+  rather than incrementally summing — self-correcting against missed heartbeats, but a genuinely
+  stale `active` session (agent killed without a final heartbeat) just stops updating; nothing
+  auto-closes it. No cleanup job for orphaned active sessions yet.
+**DoD (Milestone 1):** A `curl`/manual `POST` to `/api/agent/pair` with a valid pairing code
+returns a working API key; a manual `POST` to `/api/agent/heartbeat` with that key creates a
+classified `activity_sessions` row and it shows up on `/activities`. Not yet verified end-to-end
+against the deployed app — do this before starting Milestone 2.
+
+## Desktop Agent — Milestone 2: the native Tauri app (not started)
+Tray-only Rust/Tauri app: poll the active window/process via the Windows API every few seconds,
+track local idle time, hold the paired API key (needs a decision on local secure storage —
+Windows Credential Manager via a Tauri plugin vs. a plain local config file), and POST
+heartbeats to `/api/agent/heartbeat`. Auto-start on login, no visible window most of the time.
 
 ## Sprint 6 — Role System (expanded scope, foundational)
 **Goal:** Distinguish consultant/manager/admin so later features (profitability, capacity
@@ -260,12 +291,11 @@ normal, expected work — not a signal that needs flagging or surfacing back to 
 no detection logic. If this changes later, item 7 in `docs/ARCHITECTURE_EXPANSION.md` still has
 the design options if anyone wants to revisit.
 
-## Desktop Agent — still deferred
-Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
-"no Tauri toolchain" blocker from Sprint 6's original scope still holds even though this
-session runs on a real Windows machine, not a sandbox. Schema (`devices`, `activity_sessions
-.device_id`, `idle_periods`) is ready; nothing else has changed. Independent track — install
-Rust + Tauri prerequisites first if/when someone picks this back up.
+## Desktop Agent — unblocked 2026-08-19
+Rust/Cargo were confirmed missing earlier the same day, then installed (rustup, verified with a
+real compile) along with the MSVC C++ Build Tools (needed admin/elevated PowerShell — the user
+ran that step) and confirmed WebView2 was already present. See the "Desktop Agent — Milestone 1"
+section above for what's built now that the toolchain exists.
 
 ---
 
@@ -284,7 +314,7 @@ S10 ████████  Timesheet Auto-Generation + Approval Workflow — 
 S11 ████████  Profitability — expanded scope
 S12 ████████  Capacity Planning — expanded scope
     ░░░░░░░  Recurring-Work Detection — descoped 2026-08-19, not building
-    ░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
+    ████░░░  Desktop Agent (separate track — toolchain unblocked, web side (Milestone 1) live, native Tauri app (Milestone 2) not started)
 ```
 **v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 12 — capacity
 planning live. That closes out the expanded-scope roadmap except the desktop agent (blocked on

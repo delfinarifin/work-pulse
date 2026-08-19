@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import type { BillableStatus, TimesheetEntryWithJoins } from "@/lib/types";
 import { listActivityEventsForConsultantOnDate } from "@/lib/data/activity-events";
@@ -101,17 +102,22 @@ export async function runAggregationForConsultantDate(
 // on existing auto rows, never touches manual rows. Sessions still awaiting
 // confirmation (no task_id, or review_status='ignored') contribute nothing —
 // see aggregateActivitySessions.
+// Accepts an optional injected client + user_id, same reason as
+// listActivitySessionsForConsultantOnDate — the agent API routes have no
+// cookie session to derive `user` from, so they pass both explicitly.
 export async function runSessionAggregationForConsultantDate(
   consultantId: string,
   date: string,
+  client?: SupabaseClient,
+  userId?: string | null,
 ): Promise<void> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = client ?? (await createClient());
+  const user: { id: string | null } = client
+    ? { id: userId ?? null }
+    : { id: (await supabase.auth.getUser()).data.user?.id ?? null };
 
   const [sessions, existingRes] = await Promise.all([
-    listActivitySessionsForConsultantOnDate(consultantId, date),
+    listActivitySessionsForConsultantOnDate(consultantId, date, supabase),
     supabase
       .from("timesheet_entries")
       .select("id, client_id, engagement_id, service_id, task_id, billable_status, source, submission_id")
