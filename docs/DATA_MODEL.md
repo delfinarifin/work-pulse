@@ -288,8 +288,14 @@ check the caller's role without recursing into `consultants`' own RLS.
   etc.), but any role value they try to set is silently discarded unless the caller is already
   an admin. Admins get a separate `consultants_admin_write` policy to edit any consultant's row.
 - **Bootstrapping the first admin is a manual, one-time step** — run once in the Supabase SQL
-  editor (as `postgres`, bypassing RLS): `update consultants set role = 'admin' where email =
-  '...';`. Nobody can self-promote through the app, by design.
+  editor. The SQL editor bypasses RLS (runs as `postgres`) but NOT the
+  `prevent_role_self_escalation` trigger — the trigger checks `auth.uid()`, which is null with
+  no logged-in session, so a plain `update consultants set role = 'admin' where email = '...'`
+  reports "1 row affected" but silently no-ops the role column. The bootstrap must disable the
+  trigger first: `alter table consultants disable trigger
+  consultants_prevent_role_self_escalation;`, run the `update`, then `alter table consultants
+  enable trigger consultants_prevent_role_self_escalation;` — always verify with a `select`
+  afterward. Nobody can self-promote through the app, by design.
 
 ## work_journal_entries
 Free-text, human-authored daily notes — distinct from `activity_sessions.notes` (per-session,

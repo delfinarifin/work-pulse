@@ -87,9 +87,20 @@ create trigger consultants_prevent_role_self_escalation
 
 -- Bootstrapping: the very first admin cannot be created through the app
 -- (nobody has admin rights yet to grant it). One-time step, run once by
--- whoever owns the Supabase project, in the SQL editor (runs as postgres,
--- bypasses RLS and the trigger above):
+-- whoever owns the Supabase project, in the SQL editor.
+--
+-- IMPORTANT: the SQL editor runs with no auth.uid() (no logged-in
+-- session), so current_user_role() there returns null and the trigger
+-- above silently reverts the role change back to whatever it was — RLS is
+-- bypassed by the SQL editor's postgres role, but the trigger fires
+-- regardless of RLS, so it isn't. The bootstrap UPDATE must temporarily
+-- disable the trigger:
+--   alter table consultants disable trigger consultants_prevent_role_self_escalation;
 --   update consultants set role = 'admin' where email = 'the-first-admin@example.com';
+--   alter table consultants enable trigger consultants_prevent_role_self_escalation;
+-- A plain UPDATE with the trigger left enabled will report "1 row
+-- affected" but silently no-op the role column — always verify with a
+-- SELECT afterward.
 
 -- Broaden read (only) on every owner-scoped operational table so a manager/
 -- admin can see the whole team's activity, not just their own. Additive to
