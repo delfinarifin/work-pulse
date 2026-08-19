@@ -6,6 +6,15 @@ type CookieToSet = { name: string; value: string; options: CookieOptions };
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({ request });
 
+  // The agent authenticates with its own bearer API key (lib/agent/auth.ts),
+  // not a Supabase Auth cookie session — this middleware's "no user, no
+  // public path -> redirect to /login" rule would otherwise 302 every agent
+  // request into an HTML login page instead of letting the route handler
+  // run its own auth check and return JSON.
+  if (request.nextUrl.pathname.startsWith("/api/agent/")) {
+    return supabaseResponse;
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
