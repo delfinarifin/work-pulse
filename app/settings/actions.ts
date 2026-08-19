@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { updateClassificationSettings } from "@/lib/data/classification-settings";
-import { updateConsultantRole } from "@/lib/data/consultants";
+import { updateConsultantRole, setConsultantActive } from "@/lib/data/consultants";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 import type { ConsultantRole } from "@/lib/types";
 
@@ -51,6 +51,27 @@ export async function updateConsultantRoleAction(formData: FormData): Promise<vo
     entity: "consultants",
     entity_id: id,
     details: { role },
+  });
+
+  revalidatePath("/settings");
+}
+
+export async function toggleConsultantActiveAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  const nextActive = String(formData.get("active") ?? "") === "true";
+  if (!id) return;
+
+  // A non-manager/admin caller's update is silently no-op'd at the DB layer
+  // (RLS + prevent_role_self_escalation trigger, extended in 0013 to also
+  // guard `active`) — this action never needs to check the caller's own
+  // role itself.
+  await setConsultantActive(id, nextActive);
+
+  await writeAuditLog({
+    action: nextActive ? "consultant.activate" : "consultant.deactivate",
+    entity: "consultants",
+    entity_id: id,
+    details: { active: nextActive },
   });
 
   revalidatePath("/settings");

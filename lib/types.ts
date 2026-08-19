@@ -6,6 +6,7 @@ export type Consultant = {
   email: string;
   job_role: string;
   role: ConsultantRole;
+  active: boolean;
   created_at: string;
 };
 

@@ -99,6 +99,12 @@ See `docs/ARCHITECTURE_EXPANSION.md` for the full assessment and sequencing rati
 - [x] `prevent_role_self_escalation` trigger — a consultant can't grant themselves a role via
   their own `_own_update` policy
 - [x] Admin-only "Team & roles" section on Settings to assign roles
+- [x] Deactivate/reactivate a consultant (0013, added after launch) — no hard delete, since
+  activity_sessions/timesheet_entries/timesheet_submissions/audit_logs all FK into consultants
+  with no cascade; deactivation is reversible and keeps history intact. Blocked at middleware on
+  every request (not just sign-in), excluded from assignment pickers (`listActiveConsultants`),
+  and the `active` column got the same self-escalation guard as `role` — a deactivated
+  consultant can't flip themselves back on
 - [ ] First admin bootstrap — manual one-time SQL step, not app-driven by design (see
   `docs/DATA_MODEL.md` Role System section) — **must be run once against the live database
   before this is usable**, this task list can't check it off for you

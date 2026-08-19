@@ -1,5 +1,5 @@
 import { getCurrentConsultant, listConsultants } from "@/lib/data/consultants";
-import { updateConsultantRoleAction } from "@/app/settings/actions";
+import { updateConsultantRoleAction, toggleConsultantActiveAction } from "@/app/settings/actions";
 import { getOrCreateClassificationSettings } from "@/lib/data/classification-settings";
 import { listLearningRules } from "@/lib/data/learning-rules";
 import { listServices } from "@/lib/data/services";
@@ -52,12 +52,13 @@ export default async function SettingsPage() {
                   <th className="px-4 py-2 font-medium">Email</th>
                   <th className="px-4 py-2 font-medium">Job role</th>
                   <th className="px-4 py-2 font-medium">Role</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
                   <th className="px-4 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {team.map((member) => (
-                  <tr key={member.id}>
+                  <tr key={member.id} className={member.active ? "" : "opacity-50"}>
                     <td className="px-4 py-2.5 text-neutral-700">{member.name}</td>
                     <td className="px-4 py-2.5 text-neutral-600">{member.email}</td>
                     <td className="px-4 py-2.5 text-neutral-600">{member.job_role}</td>
@@ -67,6 +68,7 @@ export default async function SettingsPage() {
                         <select
                           name="role"
                           defaultValue={member.role}
+                          disabled={!member.active}
                           className="rounded border border-neutral-300 px-2 py-1 text-xs"
                         >
                           <option value="consultant">Consultant</option>
@@ -75,9 +77,35 @@ export default async function SettingsPage() {
                         </select>
                         <button
                           type="submit"
-                          className="rounded bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-700"
+                          disabled={!member.active}
+                          className="rounded bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-700 disabled:opacity-50"
                         >
                           Save
+                        </button>
+                      </form>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          member.active ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"
+                        }`}
+                      >
+                        {member.active ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <form action={toggleConsultantActiveAction}>
+                        <input type="hidden" name="id" value={member.id} />
+                        <input type="hidden" name="active" value={(!member.active).toString()} />
+                        <button
+                          type="submit"
+                          className={`rounded border px-2 py-1 text-xs font-medium ${
+                            member.active
+                              ? "border-red-300 text-red-600 hover:bg-red-50"
+                              : "border-green-300 text-green-700 hover:bg-green-50"
+                          }`}
+                        >
+                          {member.active ? "Deactivate" : "Reactivate"}
                         </button>
                       </form>
                     </td>

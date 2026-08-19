@@ -53,6 +53,22 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(new URL("/", request.url));
     }
 
+    // A deactivated consultant is blocked from the app on every request,
+    // not just at sign-in — a manager can flip `active` off mid-session
+    // and it takes effect immediately. No row yet (brand-new user,
+    // getCurrentConsultant hasn't created it) is not a deactivation.
+    if (user && !isPublicPath) {
+      const { data: consultant } = await supabase
+        .from("consultants")
+        .select("active")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (consultant && consultant.active === false) {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(new URL("/login?deactivated=1", request.url));
+      }
+    }
+
     return response;
   } catch {
     // Never let an auth hiccup crash the entire edge middleware

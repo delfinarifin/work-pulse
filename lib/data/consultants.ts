@@ -12,6 +12,21 @@ export async function listConsultants(): Promise<Consultant[]> {
   return data ?? [];
 }
 
+// For pickers (engagement partner/manager, billing rates, capacity,
+// allocations) — a deactivated consultant shouldn't be assignable to new
+// work, but stays visible on historical records and in Team & roles.
+export async function listActiveConsultants(): Promise<Consultant[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("consultants")
+    .select("*")
+    .eq("active", true)
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 // The signed-in user's own consultant record IS their identity in the app —
 // created on first access from the name/job_role captured at signup.
 export async function getCurrentConsultant(): Promise<Consultant | null> {
@@ -51,6 +66,22 @@ export async function updateConsultantRole(id: string, role: ConsultantRole): Pr
   const { data, error } = await supabase
     .from("consultants")
     .update({ role })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// Only succeeds for a caller who is manager/admin — enforced by RLS
+// (consultants_admin_write) and backstopped by the
+// prevent_role_self_escalation trigger (which also now guards `active`,
+// see 0013), not by this function.
+export async function setConsultantActive(id: string, active: boolean): Promise<Consultant> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("consultants")
+    .update({ active })
     .eq("id", id)
     .select("*")
     .single();

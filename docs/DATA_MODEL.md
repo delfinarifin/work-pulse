@@ -8,8 +8,20 @@
 | email | text unique not null |
 | job_role | text not null (e.g., 'Tax Senior', 'Accounting Associate') |
 | role | text not null default 'consultant' ('consultant' / 'manager' / 'admin') — see [[Role System]] below |
+| active | boolean not null default true — deactivate-not-delete (0013); see below |
 | user_id | uuid nullable |
 | created_at | timestamptz default now() |
+
+Deactivation, not deletion — a consultant is referenced by `activity_sessions`,
+`timesheet_entries`, `timesheet_submissions`, and `audit_logs`, all `NOT NULL` FKs with no
+cascade, so a hard delete would fail outright or require cascading away someone's entire work
+history. `docs/AGENTIC_LAYER.md` already flagged "delete consultant" as critical/human-only for
+this reason. `active=false` is enforced at the `lib/supabase/middleware.ts` layer on every
+request (not just sign-in — a manager deactivating someone mid-session takes effect
+immediately, forces sign-out), and excluded from assignment pickers via
+`listActiveConsultants()`. The `prevent_role_self_escalation` trigger (0007) was extended in
+0013 to also guard `active` — without that, a consultant could flip themselves back on through
+their own `consultants_own_update` policy.
 
 ## clients
 | Field | Type |

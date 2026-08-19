@@ -1,4 +1,4 @@
-import { getCurrentConsultant, listConsultants } from "@/lib/data/consultants";
+import { getCurrentConsultant, listActiveConsultants } from "@/lib/data/consultants";
 import { listEngagements } from "@/lib/data/engagements";
 import { listClients } from "@/lib/data/clients";
 import { listServices } from "@/lib/data/services";
@@ -18,7 +18,7 @@ export default async function EngagementsPage() {
     listEngagements(),
     listClients(),
     listServices(),
-    isManagerOrAdmin ? listConsultants() : Promise.resolve([]),
+    isManagerOrAdmin ? listActiveConsultants() : Promise.resolve([]),
   ]);
 
   return (

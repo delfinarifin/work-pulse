@@ -1,4 +1,4 @@
-import { getCurrentConsultant, listConsultants } from "@/lib/data/consultants";
+import { getCurrentConsultant, listActiveConsultants } from "@/lib/data/consultants";
 import { listConsultantCapacities, listResourceAllocations } from "@/lib/data/capacity";
 import { listTimesheetEntries } from "@/lib/data/timesheets";
 import { listEngagements } from "@/lib/data/engagements";
@@ -20,7 +20,7 @@ export default async function CapacityPage() {
   }
 
   const [consultants, capacities, allocations, entries, engagements] = await Promise.all([
-    listConsultants(),
+    listActiveConsultants(),
     listConsultantCapacities(),
     listResourceAllocations(),
     listTimesheetEntries(),

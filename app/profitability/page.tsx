@@ -1,4 +1,4 @@
-import { getCurrentConsultant, listConsultants } from "@/lib/data/consultants";
+import { getCurrentConsultant, listActiveConsultants } from "@/lib/data/consultants";
 import { listBillingRates } from "@/lib/data/billing-rates";
 import { listTimesheetEntries } from "@/lib/data/timesheets";
 import { listClients } from "@/lib/data/clients";
@@ -23,7 +23,7 @@ export default async function ProfitabilityPage() {
   const [entries, rates, consultants, clients, engagements, services] = await Promise.all([
     listTimesheetEntries(),
     listBillingRates(),
-    listConsultants(),
+    listActiveConsultants(),
     listClients(),
     listEngagements(),
     listServices(),
