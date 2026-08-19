@@ -31,7 +31,8 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (lookupError) {
-    return NextResponse.json({ error: "Lookup failed" }, { status: 500 });
+    console.error("agent pair lookup failed", lookupError);
+    return NextResponse.json({ error: "Lookup failed", detail: lookupError.message }, { status: 500 });
   }
   if (!device) {
     return NextResponse.json({ error: "Invalid or expired pairing code" }, { status: 401 });
