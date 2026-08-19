@@ -120,11 +120,36 @@ that reads `consultant.role` — same schema-then-code-together rule as prior sp
 - Microsoft Graph/SharePoint integration — needs the firm's Azure AD tenant admin.
 - Weekly automated report email.
 
-## Sprint 8+ — Engagements, Profitability, Capacity, Journal, Recurring-Work (expanded scope)
-Not started. Full assessment, schema shapes, and recommended order in
-`docs/ARCHITECTURE_EXPANSION.md`: engagements (foundational) → work journal (independent,
-low-risk) → timesheet auto-generation + approval → profitability + capacity planning (parallel)
-→ recurring-work detection (wants real historical data, do last).
+## Sprint 8 — Engagements
+**Goal:** The bounded client-work unit that profitability, capacity planning, and (loosely)
+recurring-work detection roll up against, instead of raw `client_id`. See
+`docs/ARCHITECTURE_EXPANSION.md` item 2.
+- [x] `engagements` table (client, service, partner/manager, status, dates, budget, billing
+  type) — shared firm-wide, manager/admin write
+- [x] `engagement_id` nullable FK added to `activity_sessions` and `timesheet_entries`
+- [x] Aggregation groups by client+engagement+service+task+billable_status, so time against the
+  same client on different engagements doesn't merge into one row
+- [x] Log Activity form: optional engagement picker, filtered by the selected client
+- [x] `/engagements` page: manager/admin create form + status-transition control; everyone gets
+  read access (they need to tag their own sessions against one)
+- [ ] No classification-cascade layer suggests an engagement yet — always a manual pick on Log
+  Activity, no auto-detection from file name/path (deferred; would follow the same pattern as
+  client/service/task suggestion)
+- [ ] Timesheet entry edit form doesn't expose engagement_id yet (data layer supports it,
+  `editTimesheetEntry` accepts the field — no UI control wired up)
+**DoD:** A manager creates an engagement for a client; consultants logging activity against
+that client can optionally tag the engagement; Timesheets/Reports carry the engagement through
+via `timesheet_entries.engagement_id`. ✅ Done for capture; UI surfacing on Timesheets/Reports
+still uses only client/service/task groupings — engagement column not yet displayed there.
+
+**Note:** requires `supabase/migrations/0008_engagements.sql` to be applied before deploying
+app code that reads `engagement_id` — same schema-then-code-together rule as prior sprints.
+
+## Sprint 9+ — Profitability, Capacity, Journal, Recurring-Work (expanded scope)
+Not started. Full assessment and recommended order in `docs/ARCHITECTURE_EXPANSION.md`: work
+journal (independent, low-risk, can go anytime) → timesheet auto-generation + approval →
+profitability + capacity planning (parallel, both build on engagements) → recurring-work
+detection (wants real historical data, do last).
 
 ## Desktop Agent — still deferred
 Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
@@ -144,8 +169,9 @@ S4 ████████  Lock Down (auth/RLS)
 S5 ████████  Automatic Capture & Classification Engine
 S6 ████████  Role System (consultant/manager/admin) — expanded scope, foundational
 S7 ░░░░░░░░  Approval Workflow + Live Dashboards + AI + Graph (later)
-S8+░░░░░░░░  Engagements, Profitability, Capacity, Work Journal, Recurring-Work (expanded scope)
+S8 ████████  Engagements — expanded scope
+S9+░░░░░░░░  Profitability, Capacity, Work Journal, Recurring-Work (expanded scope)
    ░░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
-**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 6 — role system
-live, unblocking the expanded-scope features queued in Sprint 7/8+.
+**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 8 — engagements
+live, unblocking profitability/capacity planning queued in Sprint 9+.

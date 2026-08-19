@@ -2,11 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import type { ActivitySessionWithJoins, BillableStatus, ReviewStatus } from "@/lib/types";
 
 const SESSION_SELECT =
-  "*, consultant:consultants(id, name, job_role), client:clients(id, name), service:services(id, name), task:tasks(id, name)";
+  "*, consultant:consultants(id, name, job_role), client:clients(id, name), engagement:engagements(id, name), service:services(id, name), task:tasks(id, name)";
 
 export type NewActivitySession = {
   consultant_id: string;
   client_id: string | null;
+  engagement_id?: string | null;
   service_id: string | null;
   task_id: string | null;
   work_type_id: string | null;
@@ -92,6 +93,7 @@ export async function updateActivitySession(
   id: string,
   changes: Partial<{
     client_id: string | null;
+    engagement_id: string | null;
     service_id: string | null;
     task_id: string | null;
     work_type_id: string | null;

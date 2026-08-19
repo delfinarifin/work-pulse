@@ -16,6 +16,33 @@ export type Client = {
   created_at: string;
 };
 
+export type EngagementStatus = "active" | "on_hold" | "completed" | "cancelled";
+export type BillingType = "hourly" | "fixed_fee" | "retainer";
+
+export type Engagement = {
+  id: string;
+  client_id: string;
+  service_id: string | null;
+  name: string;
+  engagement_partner_id: string | null;
+  manager_id: string | null;
+  status: EngagementStatus;
+  start_date: string | null;
+  end_date: string | null;
+  target_date: string | null;
+  budget_hours: number | null;
+  budget_amount: number | null;
+  billing_type: BillingType | null;
+  created_at: string;
+};
+
+export type EngagementWithJoins = Engagement & {
+  client: { id: string; name: string } | null;
+  service: { id: string; name: string } | null;
+  engagement_partner: { id: string; name: string } | null;
+  manager: { id: string; name: string } | null;
+};
+
 export type WorkType = {
   id: string;
   name: string;
@@ -135,6 +162,7 @@ export type ActivitySession = {
   consultant_id: string;
   device_id: string | null;
   client_id: string | null;
+  engagement_id: string | null;
   service_id: string | null;
   task_id: string | null;
   work_type_id: string | null;
@@ -160,6 +188,7 @@ export type ActivitySession = {
 export type ActivitySessionWithJoins = ActivitySession & {
   consultant: { id: string; name: string; job_role: string } | null;
   client: { id: string; name: string } | null;
+  engagement: { id: string; name: string } | null;
   service: { id: string; name: string } | null;
   task: { id: string; name: string } | null;
 };
@@ -194,6 +223,7 @@ export type TimesheetEntry = {
   id: string;
   consultant_id: string;
   client_id: string | null;
+  engagement_id: string | null;
   work_type_id: string | null;
   service_id: string | null;
   task_id: string | null;
@@ -209,6 +239,7 @@ export type TimesheetEntry = {
 export type TimesheetEntryWithJoins = TimesheetEntry & {
   consultant: { id: string; name: string; job_role: string } | null;
   client: { id: string; name: string } | null;
+  engagement: { id: string; name: string } | null;
   work_type: { id: string; name: string; category: string } | null;
   service: { id: string; name: string } | null;
   task: { id: string; name: string } | null;

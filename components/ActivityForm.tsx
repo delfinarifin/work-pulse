@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState, useTransition } from "react";
 import { logActivity, suggestClassification, type LogActivityState } from "@/app/activities/new/actions";
-import type { BillableStatus, Client, Service, Task } from "@/lib/types";
+import type { BillableStatus, Client, EngagementWithJoins, Service, Task } from "@/lib/types";
 
 const initialState: LogActivityState = { error: null };
 
@@ -18,13 +18,16 @@ export default function ActivityForm({
   clients,
   services,
   tasks,
+  engagements,
 }: {
   clients: Client[];
   services: Service[];
   tasks: Task[];
+  engagements: EngagementWithJoins[];
 }) {
   const [state, formAction, pending] = useActionState(logActivity, initialState);
   const [clientId, setClientId] = useState("");
+  const [engagementId, setEngagementId] = useState("");
   const [serviceId, setServiceId] = useState("");
   const [taskId, setTaskId] = useState("");
   const [billableStatus, setBillableStatus] = useState<BillableStatus>("billable");
@@ -103,7 +106,7 @@ export default function ActivityForm({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label htmlFor="client_id" className="text-sm font-medium">
             Client
@@ -112,7 +115,14 @@ export default function ActivityForm({
             id="client_id"
             name="client_id"
             value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
+            onChange={(e) => {
+              const nextClientId = e.target.value;
+              setClientId(nextClientId);
+              const stillValid = engagements.some(
+                (eng) => eng.id === engagementId && eng.client_id === nextClientId,
+              );
+              if (!stillValid) setEngagementId("");
+            }}
             className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
           >
             <option value="">No client</option>
@@ -124,6 +134,30 @@ export default function ActivityForm({
           </select>
         </div>
 
+        <div className="space-y-1">
+          <label htmlFor="engagement_id" className="text-sm font-medium">
+            Engagement
+          </label>
+          <select
+            id="engagement_id"
+            name="engagement_id"
+            value={engagementId}
+            onChange={(e) => setEngagementId(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
+          >
+            <option value="">No engagement</option>
+            {engagements
+              .filter((eng) => !clientId || eng.client_id === clientId)
+              .map((eng) => (
+                <option key={eng.id} value={eng.id}>
+                  {eng.name}
+                </option>
+              ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label htmlFor="service_id" className="text-sm font-medium">
             Service

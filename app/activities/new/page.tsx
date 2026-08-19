@@ -2,12 +2,14 @@ import ActivityForm from "@/components/ActivityForm";
 import { listClients } from "@/lib/data/clients";
 import { listServices } from "@/lib/data/services";
 import { listTasks } from "@/lib/data/tasks";
+import { listEngagements } from "@/lib/data/engagements";
 
 export default async function NewActivityPage() {
-  const [clients, services, tasks] = await Promise.all([
+  const [clients, services, tasks, engagements] = await Promise.all([
     listClients(),
     listServices(),
     listTasks(),
+    listEngagements(),
   ]);
 
   return (
@@ -19,7 +21,7 @@ export default async function NewActivityPage() {
           and task automatically.
         </p>
       </div>
-      <ActivityForm clients={clients} services={services} tasks={tasks} />
+      <ActivityForm clients={clients} services={services} tasks={tasks} engagements={engagements} />
     </div>
   );
 }

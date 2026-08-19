@@ -78,4 +78,5 @@ lib/
 | roles | consultant/manager/admin, manager read-broadening, admin config write | consultants.role | Live (Sprint 6) |
 | ai-classify | LLM-assisted classification fallback | (scaffolded, disabled) | Deferred — needs an API key |
 | graph-integration | M365/SharePoint activity metadata | — | Deferred — needs the firm's Azure AD tenant admin |
-| engagements, profitability, capacity, work-journal, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |
+| engagements | Bounded client-work unit; tagged on sessions/entries | engagements | Live (Sprint 8) |
+| profitability, capacity, work-journal, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |

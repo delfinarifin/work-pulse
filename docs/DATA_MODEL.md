@@ -20,6 +20,32 @@
 | user_id | uuid nullable |
 | created_at | timestamptz default now() |
 
+## engagements
+The bounded unit of work between "client" and "individual session/entry" — a specific tax
+filing, an annual audit, a bookkeeping retainer. Foundational for profitability, capacity
+planning, and (loosely) recurring-work detection (0008; see `docs/ARCHITECTURE_EXPANSION.md`
+item 2). Shared firm-wide reference data like `clients`, but write-restricted to manager/admin
+since it carries budget data.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| client_id | uuid not null → clients |
+| service_id | uuid nullable → services |
+| name | text not null |
+| engagement_partner_id / manager_id | uuid nullable → consultants |
+| status | text ('active' / 'on_hold' / 'completed' / 'cancelled') |
+| start_date, end_date, target_date | date nullable |
+| budget_hours, budget_amount | numeric nullable |
+| billing_type | text nullable ('hourly' / 'fixed_fee' / 'retainer') |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+`activity_sessions.engagement_id` and `timesheet_entries.engagement_id` are both nullable FKs
+into this table — most ad-hoc work (internal meetings, admin time) will never belong to an
+engagement, same reasoning as every other optional classification field. Aggregation
+(`lib/logic/aggregation.ts`) groups by client+engagement+service+task+billable_status, so time
+against the same client but different engagements never merges into one timesheet row.
+
 ## work_types
 Legacy classification (pre-services/tasks). Kept because `timesheet_entries.work_type_id` is
 `NOT NULL` and existing reporting code reads it — every `service` bridges to one via
@@ -272,4 +298,8 @@ check the caller's role without recursing into `consultants`' own RLS.
 - **Shared reference data, authenticated-read, admin-write**: clients (still also plain
   authenticated-write, pre-existing — not yet tightened to admin-only), work_types, services,
   tasks, service_mappings, task_mappings, client_file_mappings, billable_task_rules.
+- **Shared reference data, authenticated-read, manager/admin-write**: engagements (write is
+  manager/admin only, not plain admin — the one exception to the admin-write pattern above,
+  since engagement creation/status changes are a manager-level operational action, not firm
+  configuration).
 - Anonymous visitors are redirected to `/login` by middleware — there is no demo/no-login mode.

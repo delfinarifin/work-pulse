@@ -37,6 +37,7 @@ export async function logActivity(
   formData: FormData,
 ): Promise<LogActivityState> {
   const client_id = String(formData.get("client_id") ?? "").trim();
+  const engagement_id = String(formData.get("engagement_id") ?? "").trim() || null;
   const service_id = String(formData.get("service_id") ?? "").trim();
   const task_id = String(formData.get("task_id") ?? "").trim();
   const billable_status = String(formData.get("billable_status") ?? "billable");
@@ -110,6 +111,7 @@ export async function logActivity(
     const session = await insertActivitySession({
       consultant_id: consultant.id,
       client_id: finalClientId,
+      engagement_id,
       service_id: finalServiceId,
       task_id: finalTaskId,
       work_type_id: finalWorkTypeId,
@@ -135,6 +137,7 @@ export async function logActivity(
       details: {
         file_name,
         client_id: finalClientId,
+        engagement_id,
         service_id: finalServiceId,
         task_id: finalTaskId,
         confidence: classification.overallConfidence,

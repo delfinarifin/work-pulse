@@ -50,6 +50,7 @@ export function aggregateActivityEvents(
 export type SessionAggregationGroup = {
   consultant_id: string;
   client_id: string | null;
+  engagement_id: string | null;
   service_id: string | null;
   task_id: string | null;
   work_type_id: string | null;
@@ -84,7 +85,7 @@ export function aggregateActivitySessions(
     if (!session.work_type_id) continue;
     if (session.active_duration_minutes <= 0) continue;
 
-    const key = `${session.client_id ?? "none"}:${session.service_id ?? "none"}:${session.task_id}:${session.billable_status}`;
+    const key = `${session.client_id ?? "none"}:${session.engagement_id ?? "none"}:${session.service_id ?? "none"}:${session.task_id}:${session.billable_status}`;
     const existing = groups.get(key);
 
     if (existing) {
@@ -93,6 +94,7 @@ export function aggregateActivitySessions(
       groups.set(key, {
         consultant_id: consultantId,
         client_id: session.client_id,
+        engagement_id: session.engagement_id,
         service_id: session.service_id,
         task_id: session.task_id,
         work_type_id: session.work_type_id,

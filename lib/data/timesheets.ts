@@ -6,7 +6,7 @@ import { writeAuditLog } from "@/lib/data/audit-logs";
 import { aggregateActivityEvents, aggregateActivitySessions } from "@/lib/logic/aggregation";
 
 const ENTRY_SELECT =
-  "*, consultant:consultants(id, name, job_role), client:clients(id, name), work_type:work_types(id, name, category), service:services(id, name), task:tasks(id, name)";
+  "*, consultant:consultants(id, name, job_role), client:clients(id, name), engagement:engagements(id, name), work_type:work_types(id, name, category), service:services(id, name), task:tasks(id, name)";
 
 export async function listTimesheetEntries(): Promise<
   TimesheetEntryWithJoins[]
@@ -114,7 +114,7 @@ export async function runSessionAggregationForConsultantDate(
     listActivitySessionsForConsultantOnDate(consultantId, date),
     supabase
       .from("timesheet_entries")
-      .select("id, client_id, service_id, task_id, billable_status, source")
+      .select("id, client_id, engagement_id, service_id, task_id, billable_status, source")
       .eq("consultant_id", consultantId)
       .eq("date", date),
   ]);
@@ -123,14 +123,14 @@ export async function runSessionAggregationForConsultantDate(
 
   const existingByKey = new Map(
     (existingRes.data ?? []).map((e) => [
-      `${e.client_id ?? "none"}:${e.service_id ?? "none"}:${e.task_id}:${e.billable_status}`,
+      `${e.client_id ?? "none"}:${e.engagement_id ?? "none"}:${e.service_id ?? "none"}:${e.task_id}:${e.billable_status}`,
       e,
     ]),
   );
 
   const groups = aggregateActivitySessions(sessions, consultantId, date);
   const groupKeys = new Set(
-    groups.map((g) => `${g.client_id ?? "none"}:${g.service_id ?? "none"}:${g.task_id}:${g.billable_status}`),
+    groups.map((g) => `${g.client_id ?? "none"}:${g.engagement_id ?? "none"}:${g.service_id ?? "none"}:${g.task_id}:${g.billable_status}`),
   );
   let createdCount = 0;
 
@@ -145,13 +145,14 @@ export async function runSessionAggregationForConsultantDate(
   }
 
   for (const group of groups) {
-    const key = `${group.client_id ?? "none"}:${group.service_id ?? "none"}:${group.task_id}:${group.billable_status}`;
+    const key = `${group.client_id ?? "none"}:${group.engagement_id ?? "none"}:${group.service_id ?? "none"}:${group.task_id}:${group.billable_status}`;
     const existing = existingByKey.get(key);
 
     if (!existing) {
       const { error } = await supabase.from("timesheet_entries").insert({
         consultant_id: group.consultant_id,
         client_id: group.client_id,
+        engagement_id: group.engagement_id,
         service_id: group.service_id,
         task_id: group.task_id,
         work_type_id: group.work_type_id,
@@ -187,6 +188,7 @@ export async function editTimesheetEntry(
   id: string,
   changes: Partial<{
     work_type_id: string;
+    engagement_id: string | null;
     service_id: string | null;
     task_id: string | null;
     billable_status: BillableStatus;
