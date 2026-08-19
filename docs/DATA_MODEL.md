@@ -365,6 +365,39 @@ purely a reporting layer on `/profitability`. An entry with no resolvable rate f
 still counts in `totalMinutes`/`unratedMinutes` but contributes nothing to billed/cost amounts —
 surfaced explicitly on the report rather than silently treated as $0 cost.
 
+## consultant_capacity / resource_allocations
+Weekly availability over time, and a manager's forward allocation plan against an engagement —
+compared against actual logged hours on `/capacity` (0012; see
+`docs/ARCHITECTURE_EXPANSION.md` item 4). Depends on engagements (0008) and the role system
+(0007); built independently of profitability (0011), per the assessment's "can run in parallel"
+call.
+| consultant_capacity | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| weekly_hours | numeric not null |
+| effective_from | date not null |
+| effective_to | date nullable |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+| resource_allocations | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| engagement_id | uuid not null → engagements |
+| week_start_date | date not null |
+| planned_hours | numeric not null |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+Unlike `billing_rates`, these aren't cost-sensitive, so a consultant gets self-read on top of
+manager/admin read-all-write-all — but the self-read check goes through `consultants.user_id`
+(`consultant_id in (select id from consultants where user_id = auth.uid())`), not a `user_id`
+column on the row itself, since whoever created an allocation (usually a manager) isn't
+necessarily the consultant it's about. `lib/logic/capacity.ts` (`resolveWeeklyCapacity`,
+`computeCapacityReport`) is pure aggregation, same reporting-layer pattern as profitability.
+
 ## RLS Notes
 - **Owner-scoped** (`auth.uid() = user_id`), **+ manager/admin broadened read**: consultants,
   activity_sessions, idle_periods, activity_events, activity_classifications,
@@ -386,4 +419,6 @@ surfaced explicitly on the report rather than silently treated as $0 cost.
   configuration).
 - **Manager/admin only, no consultant read at all**: billing_rates — the one table with no
   authenticated-read fallback; a consultant's `select` simply returns nothing.
+- **Self-read via `consultants.user_id` lookup (not a `user_id` column on the row), + manager/
+  admin read-all-write-all**: consultant_capacity, resource_allocations.
 - Anonymous visitors are redirected to `/login` by middleware — there is no demo/no-login mode.

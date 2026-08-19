@@ -7,17 +7,7 @@ import { getCurrentConsultant } from "@/lib/data/consultants";
 import { listSubmissionsForConsultant } from "@/lib/data/timesheet-submissions";
 import TimesheetTable from "@/components/TimesheetTable";
 import WeeklySubmissionPanel from "@/components/WeeklySubmissionPanel";
-
-// Monday-start ISO week containing `date`.
-function currentWeekRange(date = new Date()): { start: string; end: string } {
-  const day = date.getUTCDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-  const monday = new Date(date);
-  monday.setUTCDate(date.getUTCDate() + diffToMonday);
-  const sunday = new Date(monday);
-  sunday.setUTCDate(monday.getUTCDate() + 6);
-  return { start: monday.toISOString().slice(0, 10), end: sunday.toISOString().slice(0, 10) };
-}
+import { currentWeekRange } from "@/lib/logic/dates";
 
 export default async function TimesheetsPage() {
   const consultant = await getCurrentConsultant();

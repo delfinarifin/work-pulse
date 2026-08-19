@@ -215,10 +215,37 @@ realization %. ✅ Done.
 **Note:** requires `supabase/migrations/0011_billing_rates.sql` to be applied before deploying —
 same schema-then-code-together rule as prior sprints.
 
-## Sprint 12+ — Capacity Planning, Recurring-Work (expanded scope)
-Not started. Full assessment and recommended order in `docs/ARCHITECTURE_EXPANSION.md`:
-capacity planning (independent of profitability, can run any time now that engagements exist)
-→ recurring-work detection (wants real historical data, do last).
+## Sprint 12 — Capacity Planning
+**Goal:** Weekly capacity vs. planned allocation vs. actual logged hours. Depends on
+engagements (Sprint 8) and the role system (Sprint 6); built independently of profitability
+(Sprint 11), per the assessment's "can run in parallel" call. See
+`docs/ARCHITECTURE_EXPANSION.md` item 4.
+- [x] `consultant_capacity` (weekly hours over time) + `resource_allocations` (planned hours per
+  consultant/engagement/week)
+- [x] Self-read for both (not cost-sensitive, unlike billing_rates) via a `consultants.user_id`
+  subquery, since the row's own `user_id` is whoever created it (usually a manager), not
+  necessarily the consultant it's about — plus manager/admin read-all-write-all
+- [x] `/capacity` page: set-capacity form, set-allocation form, and a this-week report
+  (capacity / allocated / actual / over-allocated flag) — shares the Monday-start week helper
+  (`lib/logic/dates.ts`) extracted from the Sprint 10 Timesheets panel
+- [ ] Report is current-week only, same scope limitation as the Sprint 10 submission panel — no
+  way to view past/future weeks from the UI yet
+- [ ] No capacity/allocation editing UI — only create; a correction needs a new effective-dated
+  row (capacity) or is just wrong until someone notices (allocation has no effective-dating at
+  all, since it's a single week's plan, not a standing rate)
+**DoD:** A manager sets a consultant's weekly capacity and allocates them to an engagement for
+the current week; the Capacity page shows capacity vs. allocated vs. actual hours and flags
+over-allocation. ✅ Done.
+
+**Note:** requires `supabase/migrations/0012_capacity_planning.sql` to be applied before
+deploying — same schema-then-code-together rule as prior sprints.
+
+## Sprint 13+ — Recurring-Work Detection (expanded scope)
+Not started. Full assessment in `docs/ARCHITECTURE_EXPANSION.md` item 7 — the highest-
+uncertainty item on the original list: "what counts as recurring" is a real product decision
+(3 consecutive months? something looser?), worth a short explicit design pass before writing
+the detection query. Wants real historical data across several periods to be useful at all, so
+intentionally saved for last.
 
 ## Desktop Agent — still deferred
 Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
@@ -242,8 +269,9 @@ S8 ████████  Engagements — expanded scope
 S9 ████████  Work Journal — expanded scope
 S10 ████████  Timesheet Auto-Generation + Approval Workflow — expanded scope
 S11 ████████  Profitability — expanded scope
-S12+░░░░░░░  Capacity Planning, Recurring-Work (expanded scope)
+S12 ████████  Capacity Planning — expanded scope
+S13+░░░░░░░  Recurring-Work Detection (expanded scope)
     ░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
-**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 11 —
-profitability live; capacity planning/recurring-work still queued.
+**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 12 — capacity
+planning live; recurring-work detection is the last item on the original expanded-scope list.

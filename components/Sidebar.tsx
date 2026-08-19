@@ -19,6 +19,7 @@ const NAV_ITEMS = [
 const MANAGER_NAV_ITEMS = [
   { href: "/approvals", label: "Approvals" },
   { href: "/profitability", label: "Profitability" },
+  { href: "/capacity", label: "Capacity Planning" },
 ];
 
 export default function Sidebar({

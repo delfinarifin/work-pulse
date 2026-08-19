@@ -308,6 +308,33 @@ export type BillingRateWithJoins = BillingRate & {
   service: { id: string; name: string } | null;
 };
 
+export type ConsultantCapacity = {
+  id: string;
+  consultant_id: string;
+  weekly_hours: number;
+  effective_from: string;
+  effective_to: string | null;
+  created_at: string;
+};
+
+export type ConsultantCapacityWithJoins = ConsultantCapacity & {
+  consultant: { id: string; name: string } | null;
+};
+
+export type ResourceAllocation = {
+  id: string;
+  consultant_id: string;
+  engagement_id: string;
+  week_start_date: string;
+  planned_hours: number;
+  created_at: string;
+};
+
+export type ResourceAllocationWithJoins = ResourceAllocation & {
+  consultant: { id: string; name: string } | null;
+  engagement: { id: string; name: string } | null;
+};
+
 export type AuditLog = {
   id: string;
   action: string;
