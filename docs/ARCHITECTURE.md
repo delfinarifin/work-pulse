@@ -43,11 +43,29 @@ Timesheets**, **Reports**, **Settings**. Collapses to hamburger on mobile.
    (`aggregateActivitySessions`) is what the live app uses.
 4. **UI** (`app/`) — server components for data, client components for interactivity.
 
-## Why Core Works Without AI
-The classification engine is fully deterministic — learned rules and configurable keyword/
-pattern mappings, no LLM in the loop. `lib/classification/layers/ai-metadata.ts` is scaffolded
-but disabled (`AI_CLASSIFICATION_ENABLED = false`) since no LLM API key is configured; the
-cascade works completely without it, just with lower coverage on ambiguous files.
+## AI Classification Layer (added post-launch)
+`lib/classification/layers/ai-metadata.ts` is layer 5 of the cascade — a Claude API call (one
+combined request for client+service+task, `claude-opus-5`) that runs only when the
+deterministic layers (learned rules, file/folder mappings, keyword mappings) leave client,
+service, or task still unresolved. Requires `ANTHROPIC_API_KEY`; auto-disables (returns `null`,
+same as any other layer with no match) when the key isn't configured — the deterministic
+cascade works completely without it, just with lower coverage on ambiguous/non-tax-accounting
+work.
+
+Two deliberate product decisions baked into this layer, both explicit user calls, not defaults:
+- **The taxonomy is allowed to grow uncontrolled from AI guesses.** If the model can't map work
+  to an existing service/task, it proposes a new name and the layer creates that row outright
+  (via the service-role client, so it works regardless of whether the triggering caller is an
+  admin) — no review queue, no approval gate.
+- **Non-tax-accounting work gets classified too, not left blank.** Real consultant time
+  includes internal admin, breaks, HR/IT tasks, etc. — the system prompt explicitly instructs
+  the model to always resolve to *some* service/task (a generic one if nothing more specific
+  fits) and the right `billable_status`, rather than returning null and leaving the session
+  unclassified just because it isn't billable client work.
+
+Every returned id is validated against the client/service/task list actually sent to the model
+before being trusted — an id the model hallucinates outside that list is discarded, never
+silently attached to a session.
 
 ## Repo Structure
 ```
@@ -76,7 +94,7 @@ lib/
 | settings | Per-consultant thresholds | classification_settings | Live |
 | desktop-agent | Real background file/app detection | devices, idle_periods | Web side live (Sprint: Desktop Agent Milestone 1 — pairing, heartbeat API, service-role client); native Tauri app is Milestone 2, not started |
 | roles | consultant/manager/admin, manager read-broadening, admin config write | consultants.role | Live (Sprint 6) |
-| ai-classify | LLM-assisted classification fallback | (scaffolded, disabled) | Deferred — needs an API key |
+| ai-classify | LLM-assisted classification fallback (layer 5), grows the taxonomy | activity_classifications | Live once ANTHROPIC_API_KEY is configured |
 | graph-integration | M365/SharePoint activity metadata | — | Deferred — needs the firm's Azure AD tenant admin |
 | engagements | Bounded client-work unit; tagged on sessions/entries | engagements | Live (Sprint 8) |
 | work-journal | Free-text daily notes, optional manager/client visibility | work_journal_entries | Live (Sprint 9) |

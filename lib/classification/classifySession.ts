@@ -39,8 +39,7 @@ export async function classifySession(
       (await matchClientFileMappings(supabase, input, ["exact_file"])) ??
       (await matchClientFileMappings(supabase, input, ["folder_path"])) ??
       (await matchClientFileMappings(supabase, input, ["filename_regex", "client_code"])) ??
-      (await matchWindowTitle(supabase, input)) ??
-      (await matchAiMetadata(input));
+      (await matchWindowTitle(supabase, input));
     if (clientResult) trail.push(clientResult);
   }
 
@@ -58,6 +57,23 @@ export async function classifySession(
     if (taskResult) trail.push(taskResult);
   }
 
+  // AI fallback (layer 5) — one combined call rather than one per
+  // dimension, only when at least one of client/service/task is still
+  // unresolved after every deterministic layer had a chance. Fills in
+  // only the pieces that are still missing; a deterministic match for
+  // one dimension is never overridden by the AI guess for that same
+  // dimension.
+  let aiResult: LayerResult | null = null;
+  if (!clientResult || !serviceResult || !taskResult) {
+    aiResult = await matchAiMetadata(supabase, input);
+    if (aiResult) {
+      trail.push(aiResult);
+      if (!clientResult && aiResult.clientId) clientResult = aiResult;
+      if (!serviceResult && aiResult.serviceId) serviceResult = aiResult;
+      if (!taskResult && aiResult.taskId) taskResult = aiResult;
+    }
+  }
+
   const clientId = clientResult?.clientId ?? null;
   const serviceId = serviceResult?.serviceId ?? null;
   const taskId = taskResult?.taskId ?? null;
@@ -71,6 +87,7 @@ export async function classifySession(
     learned,
     taskId,
     clientId,
+    aiResult,
   );
 
   const overallConfidence = Math.min(clientConfidence, serviceConfidence, taskConfidence);
@@ -112,20 +129,27 @@ async function resolveBillableStatus(
   learned: LayerResult | null,
   taskId: string | null,
   clientId: string | null,
+  aiResult: LayerResult | null,
 ): Promise<BillableStatus> {
   if (learned?.billableStatus) return learned.billableStatus;
-  if (!taskId) return "billable";
 
-  const { data } = await supabase
-    .from("billable_task_rules")
-    .select("*")
-    .eq("task_id", taskId)
-    .eq("active", true)
-    .order("priority", { ascending: true });
+  if (taskId) {
+    const { data } = await supabase
+      .from("billable_task_rules")
+      .select("*")
+      .eq("task_id", taskId)
+      .eq("active", true)
+      .order("priority", { ascending: true });
 
-  const clientSpecific = (data ?? []).find((r) => r.client_id === clientId);
-  if (clientSpecific) return clientSpecific.billable_status;
-  const generic = (data ?? []).find((r) => r.client_id === null);
-  if (generic) return generic.billable_status;
+    const clientSpecific = (data ?? []).find((r) => r.client_id === clientId);
+    if (clientSpecific) return clientSpecific.billable_status;
+    const generic = (data ?? []).find((r) => r.client_id === null);
+    if (generic) return generic.billable_status;
+  }
+
+  // No configured rule for this task (or no task at all) — the AI's own
+  // estimate is a better default than blindly assuming "billable" for
+  // clearly non-client work (breaks, internal admin) it just classified.
+  if (aiResult?.billableStatus) return aiResult.billableStatus;
   return "billable";
 }

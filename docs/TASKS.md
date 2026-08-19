@@ -163,14 +163,22 @@ another consultant to manager/admin from Settings; a non-admin's attempt to chan
 **Note:** requires `supabase/migrations/0007_roles.sql` to be applied before deploying app code
 that reads `consultant.role` — same schema-then-code-together rule as prior sprints.
 
-## Sprint 7 — Approval Workflow, Live Dashboards, AI, Graph (later, deferred)
-- Submit weekly timesheet → manager approval → lock entries. (Role system now exists — see
-  Sprint 6 — so this is unblocked; still not started.)
-- Supabase Realtime live status — needs a continuous data source (the desktop agent).
-- AI-assisted classification (`lib/classification/layers/ai-metadata.ts`, scaffolded but
-  disabled) — needs an LLM API key, not configured.
+## Sprint 7 — Live Dashboards, Graph (later, deferred)
+- Submit weekly timesheet → manager approval → lock entries. ✅ Done — see Sprint 10.
+- Supabase Realtime live status — the desktop agent (Milestone 1) is now a continuous data
+  source, this could be picked up.
 - Microsoft Graph/SharePoint integration — needs the firm's Azure AD tenant admin.
 - Weekly automated report email.
+
+## AI-Assisted Classification — live (added post-launch)
+`lib/classification/layers/ai-metadata.ts` was scaffolded-but-disabled since v1; now implemented
+as layer 5 of the classification cascade — one combined Claude API call (`claude-opus-5`) for
+client+service+task when the deterministic layers leave something unresolved. Requires
+`ANTHROPIC_API_KEY`; falls through to "unclassified" (same as any layer with no match) when
+unset. See `docs/ARCHITECTURE.md` "AI Classification Layer" for the two explicit product
+decisions this encodes: the taxonomy grows uncontrolled from AI guesses (no review gate), and
+non-tax-accounting work (breaks, internal admin) gets classified too rather than left blank.
+No schema change — reuses `services`/`tasks`/`activity_classifications`.
 
 ## Sprint 8 — Engagements
 **Goal:** The bounded client-work unit that profitability, capacity planning, and (loosely)
