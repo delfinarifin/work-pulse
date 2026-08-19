@@ -1,8 +1,11 @@
+export type ConsultantRole = "consultant" | "manager" | "admin";
+
 export type Consultant = {
   id: string;
   name: string;
   email: string;
   job_role: string;
+  role: ConsultantRole;
   created_at: string;
 };
 

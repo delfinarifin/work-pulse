@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Consultant } from "@/lib/types";
+import type { Consultant, ConsultantRole } from "@/lib/types";
 
 export async function listConsultants(): Promise<Consultant[]> {
   const supabase = await createClient();
@@ -41,4 +41,19 @@ export async function getCurrentConsultant(): Promise<Consultant | null> {
     .single();
   if (insertError) throw insertError;
   return created;
+}
+
+// Only succeeds for a caller whose own role is 'admin' — enforced by RLS
+// (consultants_admin_write) and backstopped by the
+// prevent_role_self_escalation trigger, not by this function.
+export async function updateConsultantRole(id: string, role: ConsultantRole): Promise<Consultant> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("consultants")
+    .update({ role })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
 }

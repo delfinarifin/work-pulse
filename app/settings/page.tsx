@@ -1,4 +1,5 @@
-import { getCurrentConsultant } from "@/lib/data/consultants";
+import { getCurrentConsultant, listConsultants } from "@/lib/data/consultants";
+import { updateConsultantRoleAction } from "@/app/settings/actions";
 import { getOrCreateClassificationSettings } from "@/lib/data/classification-settings";
 import { listLearningRules } from "@/lib/data/learning-rules";
 import { listServices } from "@/lib/data/services";
@@ -24,6 +25,8 @@ export default async function SettingsPage() {
 
   const serviceById = new Map(services.map((s) => [s.id, s.name]));
   const taskById = new Map(tasks.map((t) => [t.id, t.name]));
+  const isAdmin = consultant.role === "admin";
+  const team = isAdmin ? await listConsultants() : [];
 
   return (
     <div className="space-y-10">
@@ -33,6 +36,58 @@ export default async function SettingsPage() {
           Configure how Work Pulse detects and classifies your activity.
         </p>
       </div>
+
+      {isAdmin && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-neutral-700">Team &amp; roles ({team.length})</h2>
+          <p className="text-xs text-neutral-500">
+            Admin only. Managers can see the whole team&apos;s activity and timesheets; admins can
+            also edit firm-wide services/tasks/keyword mappings.
+          </p>
+          <div className="overflow-x-auto rounded-lg border border-neutral-200">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-50 text-left text-neutral-500">
+                <tr>
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Email</th>
+                  <th className="px-4 py-2 font-medium">Job role</th>
+                  <th className="px-4 py-2 font-medium">Role</th>
+                  <th className="px-4 py-2 font-medium"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {team.map((member) => (
+                  <tr key={member.id}>
+                    <td className="px-4 py-2.5 text-neutral-700">{member.name}</td>
+                    <td className="px-4 py-2.5 text-neutral-600">{member.email}</td>
+                    <td className="px-4 py-2.5 text-neutral-600">{member.job_role}</td>
+                    <td className="px-4 py-2.5">
+                      <form action={updateConsultantRoleAction} className="flex items-center gap-2">
+                        <input type="hidden" name="id" value={member.id} />
+                        <select
+                          name="role"
+                          defaultValue={member.role}
+                          className="rounded border border-neutral-300 px-2 py-1 text-xs"
+                        >
+                          <option value="consultant">Consultant</option>
+                          <option value="manager">Manager</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <button
+                          type="submit"
+                          className="rounded bg-neutral-900 px-2 py-1 text-xs font-medium text-white hover:bg-neutral-700"
+                        >
+                          Save
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-neutral-700">Detection thresholds</h2>

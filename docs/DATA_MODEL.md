@@ -7,6 +7,7 @@
 | name | text not null |
 | email | text unique not null |
 | job_role | text not null (e.g., 'Tax Senior', 'Accounting Associate') |
+| role | text not null default 'consultant' ('consultant' / 'manager' / 'admin') — see [[Role System]] below |
 | user_id | uuid nullable |
 | created_at | timestamptz default now() |
 
@@ -244,12 +245,31 @@ values (`session.classify`, `session.confirm`, `session.change`, `session.ignore
 | details | jsonb |
 | created_at | timestamptz default now() |
 
+## Role System (0007)
+Single-firm, single-tenant — no `firm_id`, every authenticated user is a consultant at the same
+firm. `consultants.role` is `consultant` (default) / `manager` / `admin`. Two SECURITY DEFINER
+helper functions (`current_user_role()`, `is_manager_or_admin()`) let policies on other tables
+check the caller's role without recursing into `consultants`' own RLS.
+- Managers/admins get an **additive read-only** broadening on every owner-scoped operational
+  table (see below) — they see everyone's data, on top of their own `_own_read` policy. No
+  broadened write yet; each later feature (approval workflow, resource allocation) adds the
+  specific write grant it needs.
+- Admins additionally get write access to firm-wide reference data (`services`, `tasks`,
+  `service_mappings`, `task_mappings`, `client_file_mappings`, `billable_task_rules`,
+  `work_types`) — the gap called out as deferred in Sprints 3/5.
+- `consultants.role` itself is guarded by the `prevent_role_self_escalation` trigger — a
+  consultant's own `_own_update` policy still lets them edit their own row (name, job_role,
+  etc.), but any role value they try to set is silently discarded unless the caller is already
+  an admin. Admins get a separate `consultants_admin_write` policy to edit any consultant's row.
+- **Bootstrapping the first admin is a manual, one-time step** — run once in the Supabase SQL
+  editor (as `postgres`, bypassing RLS): `update consultants set role = 'admin' where email =
+  '...';`. Nobody can self-promote through the app, by design.
+
 ## RLS Notes
-- **Owner-scoped** (`auth.uid() = user_id`): consultants, activity_sessions, idle_periods,
-  activity_events, activity_classifications, activity_learning_rules, classification_settings,
-  timesheet_entries, audit_logs, devices.
-- **Shared reference data, authenticated-read** (no write policy — seeded via migration, no
-  admin role yet): clients (also authenticated-write, pre-existing), work_types (read-only,
-  pre-existing gap), services, tasks, service_mappings, task_mappings, client_file_mappings,
-  billable_task_rules.
+- **Owner-scoped** (`auth.uid() = user_id`), **+ manager/admin broadened read**: consultants,
+  activity_sessions, idle_periods, activity_events, activity_classifications,
+  activity_learning_rules, classification_settings, timesheet_entries, audit_logs, devices.
+- **Shared reference data, authenticated-read, admin-write**: clients (still also plain
+  authenticated-write, pre-existing — not yet tightened to admin-only), work_types, services,
+  tasks, service_mappings, task_mappings, client_file_mappings, billable_task_rules.
 - Anonymous visitors are redirected to `/login` by middleware — there is no demo/no-login mode.

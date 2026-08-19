@@ -88,15 +88,50 @@ behavior. Schema is already shaped to receive it (`devices`, `activity_sessions.
 `app/api/agent/*` routes, `lib/supabase/service.ts` (first real use of
 `SUPABASE_SERVICE_ROLE_KEY`), and `lib/agent/auth.ts`. Not started.
 
-## Sprint 7 — Approval Workflow, Roles, Live Dashboards, AI, Graph (later, deferred)
-- Submit weekly timesheet → manager approval → lock entries.
-- Manager/admin roles + team utilization dashboards — needs a role system (new).
-- Supabase Realtime live status — needs a continuous data source (the agent), so follows
-  Sprint 6.
+## Sprint 6 — Role System (expanded scope, foundational)
+**Goal:** Distinguish consultant/manager/admin so later features (profitability, capacity
+planning, approval workflow, engagement ownership) have someone to scope broader access to.
+See `docs/ARCHITECTURE_EXPANSION.md` for the full assessment and sequencing rationale.
+- [x] `consultants.role` column (`consultant` / `manager` / `admin`, default `consultant`)
+- [x] `current_user_role()` / `is_manager_or_admin()` SECURITY DEFINER helpers
+- [x] Additive manager/admin read-only broadening on every owner-scoped operational table
+- [x] Admin write access to firm-wide reference data (services/tasks/mappings/rules/work_types)
+- [x] `prevent_role_self_escalation` trigger — a consultant can't grant themselves a role via
+  their own `_own_update` policy
+- [x] Admin-only "Team & roles" section on Settings to assign roles
+- [ ] First admin bootstrap — manual one-time SQL step, not app-driven by design (see
+  `docs/DATA_MODEL.md` Role System section) — **must be run once against the live database
+  before this is usable**, this task list can't check it off for you
+- Decision made: **single-firm, single-tenant** — no `firm_id`. Matches the existing pattern
+  where clients/services/tasks are already shared firm-wide reference data.
+**DoD:** An admin (once bootstrapped) can see the whole team's activity/timesheets and promote
+another consultant to manager/admin from Settings; a non-admin's attempt to change their own
+`role` via any update is silently discarded.
+
+**Note:** requires `supabase/migrations/0007_roles.sql` to be applied before deploying app code
+that reads `consultant.role` — same schema-then-code-together rule as prior sprints.
+
+## Sprint 7 — Approval Workflow, Live Dashboards, AI, Graph (later, deferred)
+- Submit weekly timesheet → manager approval → lock entries. (Role system now exists — see
+  Sprint 6 — so this is unblocked; still not started.)
+- Supabase Realtime live status — needs a continuous data source (the desktop agent).
 - AI-assisted classification (`lib/classification/layers/ai-metadata.ts`, scaffolded but
   disabled) — needs an LLM API key, not configured.
 - Microsoft Graph/SharePoint integration — needs the firm's Azure AD tenant admin.
 - Weekly automated report email.
+
+## Sprint 8+ — Engagements, Profitability, Capacity, Journal, Recurring-Work (expanded scope)
+Not started. Full assessment, schema shapes, and recommended order in
+`docs/ARCHITECTURE_EXPANSION.md`: engagements (foundational) → work journal (independent,
+low-risk) → timesheet auto-generation + approval → profitability + capacity planning (parallel)
+→ recurring-work detection (wants real historical data, do last).
+
+## Desktop Agent — still deferred
+Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
+"no Tauri toolchain" blocker from Sprint 6's original scope still holds even though this
+session runs on a real Windows machine, not a sandbox. Schema (`devices`, `activity_sessions
+.device_id`, `idle_periods`) is ready; nothing else has changed. Independent track — install
+Rust + Tauri prerequisites first if/when someone picks this back up.
 
 ---
 
@@ -107,8 +142,10 @@ S2 ████████  Dashboard + Reports
 S3 ████████  Manual Entry + Config
 S4 ████████  Lock Down (auth/RLS)
 S5 ████████  Automatic Capture & Classification Engine
-S6 ░░░░░░░░  Desktop Agent (deferred — needs a Rust/Tauri build environment)
-S7 ░░░░░░░░  Approval + Roles + Live Dashboards + AI + Graph (later)
+S6 ████████  Role System (consultant/manager/admin) — expanded scope, foundational
+S7 ░░░░░░░░  Approval Workflow + Live Dashboards + AI + Graph (later)
+S8+░░░░░░░░  Engagements, Profitability, Capacity, Work Journal, Recurring-Work (expanded scope)
+   ░░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
-**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 5 — automatic
-classification with learning, live in the web app.
+**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 6 — role system
+live, unblocking the expanded-scope features queued in Sprint 7/8+.

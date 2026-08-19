@@ -74,7 +74,8 @@ lib/
 | aggregation | Merge sessions into timesheet entries | timesheet_entries | Live |
 | review | Confirm/Change/Ignore, merge, delete | activity_sessions.review_status | Live |
 | settings | Per-consultant thresholds | classification_settings | Live |
-| desktop-agent | Real background file/app detection | devices, idle_periods | Deferred — separate plan, needs a Rust/Tauri build environment this sandbox doesn't have |
-| roles | Manager/admin dashboards | (no table yet) | Deferred |
+| desktop-agent | Real background file/app detection | devices, idle_periods | Deferred — needs Rust/Tauri toolchain, confirmed not installed in this environment either |
+| roles | consultant/manager/admin, manager read-broadening, admin config write | consultants.role | Live (Sprint 6) |
 | ai-classify | LLM-assisted classification fallback | (scaffolded, disabled) | Deferred — needs an API key |
 | graph-integration | M365/SharePoint activity metadata | — | Deferred — needs the firm's Azure AD tenant admin |
+| engagements, profitability, capacity, work-journal, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |

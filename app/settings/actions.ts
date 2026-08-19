@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { updateClassificationSettings } from "@/lib/data/classification-settings";
+import { updateConsultantRole } from "@/lib/data/consultants";
 import { writeAuditLog } from "@/lib/data/audit-logs";
+import type { ConsultantRole } from "@/lib/types";
 
 export async function updateSettingsAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
@@ -26,6 +28,29 @@ export async function updateSettingsAction(formData: FormData): Promise<void> {
     entity: "classification_settings",
     entity_id: id,
     details: { idle_threshold_minutes: idleThreshold, confidence_auto_accept_threshold: autoAccept, confidence_confirm_threshold: confirmThreshold },
+  });
+
+  revalidatePath("/settings");
+}
+
+const VALID_ROLES: ConsultantRole[] = ["consultant", "manager", "admin"];
+
+export async function updateConsultantRoleAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  const role = String(formData.get("role") ?? "") as ConsultantRole;
+
+  if (!id || !VALID_ROLES.includes(role)) return;
+
+  // A non-admin caller's update is silently no-op'd at the DB layer (RLS +
+  // prevent_role_self_escalation trigger) — this action never needs to
+  // check the caller's own role itself.
+  await updateConsultantRole(id, role);
+
+  await writeAuditLog({
+    action: "consultant.role_change",
+    entity: "consultants",
+    entity_id: id,
+    details: { role },
   });
 
   revalidatePath("/settings");
