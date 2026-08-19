@@ -110,8 +110,17 @@ compile, 2026-08-19). `SUPABASE_SERVICE_ROLE_KEY` is provisioned in Vercel and p
   auto-closes it. No cleanup job for orphaned active sessions yet.
 **DoD (Milestone 1):** A `curl`/manual `POST` to `/api/agent/pair` with a valid pairing code
 returns a working API key; a manual `POST` to `/api/agent/heartbeat` with that key creates a
-classified `activity_sessions` row and it shows up on `/activities`. Not yet verified end-to-end
-against the deployed app — do this before starting Milestone 2.
+classified `activity_sessions` row and it shows up on `/activities`. ✅ Verified end-to-end
+against the deployed app (2026-08-19) — paired a device, sent two heartbeats for
+`Client_ABC_Tax_Return_2024.xlsx` in Excel, confirmed the classified session on `/activities`.
+
+Two real bugs caught during that verification, both fixed and deployed:
+- Middleware redirected every unauthenticated request (including `/api/agent/*`) to `/login` as
+  an HTML page — the agent's bearer-token auth never got a chance to run. Fixed by exempting
+  `/api/agent/*` from that redirect in `lib/supabase/middleware.ts`.
+- The `SUPABASE_SERVICE_ROLE_KEY` pasted into Vercel was invalid (copy-paste error) — every
+  service-client query failed with "Invalid API key". Re-copied via Supabase's copy-icon button
+  (not manual selection) and re-added in Vercel with Production+Preview+Development all checked.
 
 ## Desktop Agent — Milestone 2: the native Tauri app (not started)
 Tray-only Rust/Tauri app: poll the active window/process via the Windows API every few seconds,
@@ -314,7 +323,7 @@ S10 ████████  Timesheet Auto-Generation + Approval Workflow — 
 S11 ████████  Profitability — expanded scope
 S12 ████████  Capacity Planning — expanded scope
     ░░░░░░░  Recurring-Work Detection — descoped 2026-08-19, not building
-    ████░░░  Desktop Agent (separate track — toolchain unblocked, web side (Milestone 1) live, native Tauri app (Milestone 2) not started)
+    █████░░  Desktop Agent (separate track — toolchain unblocked, web side (Milestone 1) live and verified end-to-end, native Tauri app (Milestone 2) not started)
 ```
 **v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 12 — capacity
 planning live. That closes out the expanded-scope roadmap except the desktop agent (blocked on
