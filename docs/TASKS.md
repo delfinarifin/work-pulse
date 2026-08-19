@@ -96,6 +96,12 @@ See `docs/ARCHITECTURE_EXPANSION.md` for the full assessment and sequencing rati
 - [x] `current_user_role()` / `is_manager_or_admin()` SECURITY DEFINER helpers
 - [x] Additive manager/admin read-only broadening on every owner-scoped operational table
 - [x] Admin write access to firm-wide reference data (services/tasks/mappings/rules/work_types)
+- [x] Admin UI for services/tasks (added after launch) — rename existing, add new, and remap a
+  service's default work type, on Settings. Closes the gap called out as deferred in Sprint 3/5
+  ("no admin role yet to gate write access") — the RLS permission existed since this sprint
+  landed, the UI just hadn't been built on top of it yet. No delete — services/tasks are
+  referenced by mappings/billable_task_rules/sessions/entries with no cascade, same
+  don't-hard-delete reasoning as consultants (see `consultant_capacity`/deactivation note above)
 - [x] `prevent_role_self_escalation` trigger — a consultant can't grant themselves a role via
   their own `_own_update` policy
 - [x] Admin-only "Team & roles" section on Settings to assign roles

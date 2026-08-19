@@ -5,7 +5,9 @@ import { listLearningRules } from "@/lib/data/learning-rules";
 import { listServices } from "@/lib/data/services";
 import { listTasks } from "@/lib/data/tasks";
 import { listServiceMappings, listTaskMappings } from "@/lib/data/mappings";
+import { listWorkTypes } from "@/lib/data/work-types";
 import SettingsForm from "@/components/SettingsForm";
+import ServicesTasksManager from "@/components/ServicesTasksManager";
 
 export default async function SettingsPage() {
   const consultant = await getCurrentConsultant();
@@ -13,7 +15,7 @@ export default async function SettingsPage() {
     return <p className="text-sm text-neutral-500">Sign in to view settings.</p>;
   }
 
-  const [settings, learningRules, services, tasks, serviceMappings, taskMappings] =
+  const [settings, learningRules, services, tasks, serviceMappings, taskMappings, workTypes] =
     await Promise.all([
       getOrCreateClassificationSettings(consultant.id),
       listLearningRules(consultant.id),
@@ -21,6 +23,7 @@ export default async function SettingsPage() {
       listTasks(),
       listServiceMappings(),
       listTaskMappings(),
+      listWorkTypes(),
     ]);
 
   const serviceById = new Map(services.map((s) => [s.id, s.name]));
@@ -167,27 +170,12 @@ export default async function SettingsPage() {
           Firm services &amp; tasks
         </h2>
         <p className="text-xs text-neutral-500">
-          Shared across the firm — managed by an admin (not yet self-serve; contact your
-          Work Pulse admin to add or change these).
+          Shared across the firm.{" "}
+          {isAdmin
+            ? "Rename an existing one and Save, or add a new one below."
+            : "Managed by an admin — contact yours to add or change these."}
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <h3 className="text-xs font-medium text-neutral-500 mb-2">Services</h3>
-            <ul className="text-sm text-neutral-700 space-y-1">
-              {services.map((s) => (
-                <li key={s.id}>{s.name}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xs font-medium text-neutral-500 mb-2">Tasks</h3>
-            <ul className="text-sm text-neutral-700 space-y-1">
-              {tasks.map((t) => (
-                <li key={t.id}>{t.name}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <ServicesTasksManager services={services} tasks={tasks} workTypes={workTypes} isAdmin={isAdmin} />
       </section>
 
       <section className="space-y-3">

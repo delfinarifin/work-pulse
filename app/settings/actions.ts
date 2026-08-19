@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { updateClassificationSettings } from "@/lib/data/classification-settings";
 import { updateConsultantRole, setConsultantActive } from "@/lib/data/consultants";
+import { createService, updateService } from "@/lib/data/services";
+import { createTask, updateTask } from "@/lib/data/tasks";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 import type { ConsultantRole } from "@/lib/types";
 
@@ -74,5 +76,44 @@ export async function toggleConsultantActiveAction(formData: FormData): Promise<
     details: { active: nextActive },
   });
 
+  revalidatePath("/settings");
+}
+
+// A non-admin caller's write is rejected at the DB layer
+// (services_admin_write / tasks_admin_write RLS policies, 0007) — these
+// actions don't need to check the caller's own role themselves.
+export async function createServiceAction(formData: FormData): Promise<void> {
+  const name = String(formData.get("name") ?? "").trim();
+  const defaultWorkTypeId = String(formData.get("default_work_type_id") ?? "").trim() || null;
+  if (!name) return;
+
+  await createService(name, defaultWorkTypeId);
+  revalidatePath("/settings");
+}
+
+export async function updateServiceAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const defaultWorkTypeId = String(formData.get("default_work_type_id") ?? "").trim() || null;
+  if (!id || !name) return;
+
+  await updateService(id, name, defaultWorkTypeId);
+  revalidatePath("/settings");
+}
+
+export async function createTaskAction(formData: FormData): Promise<void> {
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  await createTask(name);
+  revalidatePath("/settings");
+}
+
+export async function updateTaskAction(formData: FormData): Promise<void> {
+  const id = String(formData.get("id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!id || !name) return;
+
+  await updateTask(id, name);
   revalidatePath("/settings");
 }

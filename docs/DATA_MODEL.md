@@ -70,8 +70,9 @@ Legacy classification (pre-services/tasks). Kept because `timesheet_entries.work
 | created_at | timestamptz default now() |
 
 ## services
-Firm-wide practice areas. Read-only via RLS (authenticated read) — no admin role yet to gate
-writes, so seeded/edited via migration.
+Firm-wide practice areas. Authenticated-read, admin-write (RLS since 0007; Settings UI added
+after launch — rename/add, no delete, since `service_mappings`/`billable_task_rules`/
+`activity_sessions`/`timesheet_entries` all reference it with no cascade).
 | Field | Type |
 |-------|------|
 | id | uuid pk |
@@ -83,7 +84,7 @@ writes, so seeded/edited via migration.
 Firm-wide task list (CIT Computation, Tax Return Preparation, Tax Return Review, PPh/VAT
 Calculation, Bank Reconciliation, Tax Research, Tax Advisory, Transfer Pricing Documentation,
 Financial Statement Preparation, Bookkeeping, Client Meeting, Internal Meeting,
-Email/Correspondence, Administration). Same RLS pattern as `services`.
+Email/Correspondence, Administration). Same RLS and admin-UI pattern as `services`.
 | Field | Type |
 |-------|------|
 | id | uuid pk |
