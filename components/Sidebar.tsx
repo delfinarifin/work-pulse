@@ -16,7 +16,10 @@ const NAV_ITEMS = [
   { href: "/settings", label: "Settings" },
 ];
 
-const MANAGER_NAV_ITEMS = [{ href: "/approvals", label: "Approvals" }];
+const MANAGER_NAV_ITEMS = [
+  { href: "/approvals", label: "Approvals" },
+  { href: "/profitability", label: "Profitability" },
+];
 
 export default function Sidebar({
   userEmail,

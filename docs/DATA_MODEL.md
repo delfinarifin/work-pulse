@@ -341,6 +341,30 @@ submission's own owner) may only move `draft`/`rejected` → `submitted`; every 
 (approve, reject, reopen, lock) requires the caller to already be manager/admin. `reopen` always
 requires and audit-logs a reason, per `docs/AGENTIC_LAYER.md`.
 
+## billing_rates
+Bill (client-facing) and cost (internal, salary-derived) rates per consultant, optionally
+narrowed to a client/engagement/service — most-specific-wins, same resolution pattern as
+`billable_task_rules` (0011; see `docs/ARCHITECTURE_EXPANSION.md` item 3). Depends on
+engagements (0008) and the role system (0007). Manager/admin only — no consultant self-read,
+since cost rates in particular are sensitive.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| client_id / engagement_id / service_id | uuid nullable (override scope) |
+| rate_type | text ('bill' / 'cost') |
+| amount_per_hour | numeric not null |
+| effective_from | date not null |
+| effective_to | date nullable |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+`lib/logic/profitability.ts` (`resolveRate`, `computeProfitability`) is pure aggregation over
+`timesheet_entries` + `billing_rates` + `engagements.budget_amount` — no new capture surface,
+purely a reporting layer on `/profitability`. An entry with no resolvable rate for its date
+still counts in `totalMinutes`/`unratedMinutes` but contributes nothing to billed/cost amounts —
+surfaced explicitly on the report rather than silently treated as $0 cost.
+
 ## RLS Notes
 - **Owner-scoped** (`auth.uid() = user_id`), **+ manager/admin broadened read**: consultants,
   activity_sessions, idle_periods, activity_events, activity_classifications,
@@ -360,4 +384,6 @@ requires and audit-logs a reason, per `docs/AGENTIC_LAYER.md`.
   manager/admin only, not plain admin — the one exception to the admin-write pattern above,
   since engagement creation/status changes are a manager-level operational action, not firm
   configuration).
+- **Manager/admin only, no consultant read at all**: billing_rates — the one table with no
+  authenticated-read fallback; a consultant's `select` simply returns nothing.
 - Anonymous visitors are redirected to `/login` by middleware — there is no demo/no-login mode.

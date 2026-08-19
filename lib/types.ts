@@ -286,6 +286,28 @@ export type TimesheetSubmissionWithJoins = TimesheetSubmission & {
   reviewer: { id: string; name: string } | null;
 };
 
+export type RateType = "bill" | "cost";
+
+export type BillingRate = {
+  id: string;
+  consultant_id: string;
+  client_id: string | null;
+  engagement_id: string | null;
+  service_id: string | null;
+  rate_type: RateType;
+  amount_per_hour: number;
+  effective_from: string;
+  effective_to: string | null;
+  created_at: string;
+};
+
+export type BillingRateWithJoins = BillingRate & {
+  consultant: { id: string; name: string } | null;
+  client: { id: string; name: string } | null;
+  engagement: { id: string; name: string } | null;
+  service: { id: string; name: string } | null;
+};
+
 export type AuditLog = {
   id: string;
   action: string;

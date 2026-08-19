@@ -192,10 +192,33 @@ reopens with a reason, which is audit-logged. ✅ Done.
 **Note:** requires `supabase/migrations/0010_timesheet_submissions.sql` to be applied before
 deploying — same schema-then-code-together rule as prior sprints.
 
-## Sprint 11+ — Profitability, Capacity, Recurring-Work (expanded scope)
+## Sprint 11 — Profitability
+**Goal:** Billed value vs. cost vs. budget, by engagement/client. Depends on engagements
+(Sprint 8) and the role system (Sprint 6). See `docs/ARCHITECTURE_EXPANSION.md` item 3.
+- [x] `billing_rates` table — bill/cost rate per consultant, optionally narrowed to a client/
+  engagement/service, most-specific-wins resolution (`lib/logic/profitability.ts`)
+- [x] Manager/admin only, no consultant self-read — cost rates are salary-derived, sensitive
+- [x] `/profitability` page: set-a-rate form + billed/cost/margin/budget-realization table
+  grouped by engagement (falls back to client, then "Unassigned")
+- [x] Entries with no resolvable rate for their date are surfaced as "unrated minutes", not
+  silently treated as $0 cost
+- [ ] No rate editing/deactivation UI yet — only create; an incorrect rate needs a new
+  effective-dated row to supersede it (data layer supports this, `effective_to` exists — no
+  button wired up to set it)
+- [ ] Report is firm-wide always-on-screen — no date-range filter yet (reads all
+  `timesheet_entries` every time), fine at current data volume, would need pagination/filtering
+  at scale
+**DoD:** A manager sets a bill and cost rate for a consultant, logs time against an engagement
+with a budget, and the Profitability page shows billed amount, cost, margin, and budget
+realization %. ✅ Done.
+
+**Note:** requires `supabase/migrations/0011_billing_rates.sql` to be applied before deploying —
+same schema-then-code-together rule as prior sprints.
+
+## Sprint 12+ — Capacity Planning, Recurring-Work (expanded scope)
 Not started. Full assessment and recommended order in `docs/ARCHITECTURE_EXPANSION.md`:
-profitability + capacity planning (parallel, both build on engagements) → recurring-work
-detection (wants real historical data, do last).
+capacity planning (independent of profitability, can run any time now that engagements exist)
+→ recurring-work detection (wants real historical data, do last).
 
 ## Desktop Agent — still deferred
 Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
@@ -218,8 +241,9 @@ S7 ░░░░░░░░  Approval Workflow + Live Dashboards + AI + Graph (l
 S8 ████████  Engagements — expanded scope
 S9 ████████  Work Journal — expanded scope
 S10 ████████  Timesheet Auto-Generation + Approval Workflow — expanded scope
-S11+░░░░░░░  Profitability, Capacity, Recurring-Work (expanded scope)
+S11 ████████  Profitability — expanded scope
+S12+░░░░░░░  Capacity Planning, Recurring-Work (expanded scope)
     ░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
-**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 10 — approval
-workflow live; profitability/capacity/recurring-work still queued.
+**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 11 —
+profitability live; capacity planning/recurring-work still queued.

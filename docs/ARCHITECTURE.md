@@ -81,4 +81,5 @@ lib/
 | engagements | Bounded client-work unit; tagged on sessions/entries | engagements | Live (Sprint 8) |
 | work-journal | Free-text daily notes, optional manager/client visibility | work_journal_entries | Live (Sprint 9) |
 | timesheet-approval | Auto-generated draft → submit → approve/reject/reopen | timesheet_submissions | Live (Sprint 10) |
-| profitability, capacity, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |
+| profitability | Billed vs. cost vs. budget, by engagement/client | billing_rates | Live (Sprint 11) |
+| capacity, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |
