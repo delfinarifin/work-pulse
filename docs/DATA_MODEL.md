@@ -291,10 +291,33 @@ check the caller's role without recursing into `consultants`' own RLS.
   editor (as `postgres`, bypassing RLS): `update consultants set role = 'admin' where email =
   '...';`. Nobody can self-promote through the app, by design.
 
+## work_journal_entries
+Free-text, human-authored daily notes — distinct from `activity_sessions.notes` (per-session,
+often auto-populated). No dependency on engagements (0009; see
+`docs/ARCHITECTURE_EXPANSION.md` item 6).
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| consultant_id | uuid not null → consultants |
+| date | date not null |
+| content | text not null |
+| engagement_id / client_id | uuid nullable → engagements / clients |
+| visibility | text ('private' / 'manager' / 'client') |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
+
+`visibility='client'` has no client-facing view yet (reserved, not built — see open decisions in
+`docs/ARCHITECTURE_EXPANSION.md`). `visibility='manager'` does have teeth: the
+`work_journal_entries_manager_read` RLS policy grants managers/admins read on any entry marked
+above `'private'`.
+
 ## RLS Notes
 - **Owner-scoped** (`auth.uid() = user_id`), **+ manager/admin broadened read**: consultants,
   activity_sessions, idle_periods, activity_events, activity_classifications,
   activity_learning_rules, classification_settings, timesheet_entries, audit_logs, devices.
+- **Owner-scoped, + manager/admin read only when the author opted in**: work_journal_entries
+  (`visibility <> 'private'`) — the one table where the broadened read is conditional on the
+  row's own data, not blanket.
 - **Shared reference data, authenticated-read, admin-write**: clients (still also plain
   authenticated-write, pre-existing — not yet tightened to admin-only), work_types, services,
   tasks, service_mappings, task_mappings, client_file_mappings, billable_task_rules.

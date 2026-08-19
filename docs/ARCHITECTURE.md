@@ -79,4 +79,5 @@ lib/
 | ai-classify | LLM-assisted classification fallback | (scaffolded, disabled) | Deferred — needs an API key |
 | graph-integration | M365/SharePoint activity metadata | — | Deferred — needs the firm's Azure AD tenant admin |
 | engagements | Bounded client-work unit; tagged on sessions/entries | engagements | Live (Sprint 8) |
-| profitability, capacity, work-journal, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |
+| work-journal | Free-text daily notes, optional manager/client visibility | work_journal_entries | Live (Sprint 9) |
+| profitability, capacity, recurring-work | Expanded scope | (not started) | See `docs/ARCHITECTURE_EXPANSION.md` |

@@ -245,6 +245,25 @@ export type TimesheetEntryWithJoins = TimesheetEntry & {
   task: { id: string; name: string } | null;
 };
 
+export type JournalVisibility = "private" | "manager" | "client";
+
+export type WorkJournalEntry = {
+  id: string;
+  consultant_id: string;
+  date: string;
+  content: string;
+  engagement_id: string | null;
+  client_id: string | null;
+  visibility: JournalVisibility;
+  created_at: string;
+};
+
+export type WorkJournalEntryWithJoins = WorkJournalEntry & {
+  consultant: { id: string; name: string } | null;
+  engagement: { id: string; name: string } | null;
+  client: { id: string; name: string } | null;
+};
+
 export type AuditLog = {
   id: string;
   action: string;

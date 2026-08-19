@@ -145,11 +145,29 @@ still uses only client/service/task groupings — engagement column not yet disp
 **Note:** requires `supabase/migrations/0008_engagements.sql` to be applied before deploying
 app code that reads `engagement_id` — same schema-then-code-together rule as prior sprints.
 
-## Sprint 9+ — Profitability, Capacity, Journal, Recurring-Work (expanded scope)
-Not started. Full assessment and recommended order in `docs/ARCHITECTURE_EXPANSION.md`: work
-journal (independent, low-risk, can go anytime) → timesheet auto-generation + approval →
-profitability + capacity planning (parallel, both build on engagements) → recurring-work
-detection (wants real historical data, do last).
+## Sprint 9 — Work Journal
+**Goal:** Free-text daily notes, separate from the auto-classified Activity Log. See
+`docs/ARCHITECTURE_EXPANSION.md` item 6.
+- [x] `work_journal_entries` table (date, content, optional client/engagement link,
+  visibility) — owner-scoped, no dependency on engagements or roles
+- [x] Manager/admin read granted only when the author sets `visibility` above `'private'` —
+  conditional on row data, not a blanket broadening like every other manager-read policy so far
+- [x] `/journal` page: create form + list + delete, own entries only
+- [ ] No client-facing view for `visibility='client'` — reserved field, not built (see open
+  decisions in `docs/ARCHITECTURE_EXPANSION.md`)
+- [ ] No UI surface yet for a manager to actually browse team members' shared journal entries
+  (RLS grants the read; nothing queries "everyone's manager-visible entries" yet)
+**DoD:** A consultant writes a dated journal entry, optionally links it to a client/engagement,
+and deletes it later — all audit-logged. ✅ Done for the individual consultant; the manager-side
+read surface is schema/RLS-ready but has no page yet.
+
+**Note:** requires `supabase/migrations/0009_work_journal.sql` to be applied before deploying —
+same schema-then-code-together rule as prior sprints.
+
+## Sprint 10+ — Profitability, Capacity, Recurring-Work (expanded scope)
+Not started. Full assessment and recommended order in `docs/ARCHITECTURE_EXPANSION.md`:
+timesheet auto-generation + approval → profitability + capacity planning (parallel, both build
+on engagements) → recurring-work detection (wants real historical data, do last).
 
 ## Desktop Agent — still deferred
 Rust/Cargo confirmed not installed in this environment (checked 2026-08-19) — the original
@@ -170,8 +188,9 @@ S5 ████████  Automatic Capture & Classification Engine
 S6 ████████  Role System (consultant/manager/admin) — expanded scope, foundational
 S7 ░░░░░░░░  Approval Workflow + Live Dashboards + AI + Graph (later)
 S8 ████████  Engagements — expanded scope
-S9+░░░░░░░░  Profitability, Capacity, Work Journal, Recurring-Work (expanded scope)
-   ░░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
+S9 ████████  Work Journal — expanded scope
+S10+░░░░░░░  Profitability, Capacity, Recurring-Work (expanded scope)
+    ░░░░░░░  Desktop Agent (separate track — deferred, needs a Rust/Tauri build environment)
 ```
-**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 8 — engagements
-live, unblocking profitability/capacity planning queued in Sprint 9+.
+**v1 functional milestone: end of Sprint 2.** Current milestone: end of Sprint 9 — work journal
+live; profitability/capacity/recurring-work still queued.
