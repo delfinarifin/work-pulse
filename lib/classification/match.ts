@@ -16,8 +16,17 @@ export function textForScope(
   scope: MatchScope,
 ): string | null {
   switch (scope) {
+    // Falls back to windowTitle when fileName is null — every seeded
+    // keyword mapping is scoped to 'filename', but the desktop agent
+    // often can't extract a clean file name from a window title (Windows
+    // hides file extensions by default, so "SCS Bookkeeping 2026 - Excel"
+    // has no ".xlsx" to detect). Without this fallback, every agent-only
+    // capture with no fileName never matches any keyword at all, even
+    // though the real signal is sitting right there in the window title.
+    // Manual Log Activity always supplies fileName, so this never
+    // changes behavior there.
     case "filename":
-      return input.fileName;
+      return input.fileName ?? input.windowTitle;
     case "path":
       return input.filePath ?? input.fileName;
     case "window_title":
