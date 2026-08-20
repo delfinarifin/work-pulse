@@ -1,6 +1,6 @@
 import { getCurrentConsultant, listActiveConsultants } from "@/lib/data/consultants";
 import { listEngagements } from "@/lib/data/engagements";
-import { listClients } from "@/lib/data/clients";
+import { listActiveClients } from "@/lib/data/clients";
 import { listServices } from "@/lib/data/services";
 import { updateEngagementStatusAction } from "@/app/engagements/actions";
 import EngagementForm from "@/components/EngagementForm";
@@ -16,7 +16,7 @@ export default async function EngagementsPage() {
   const isManagerOrAdmin = consultant.role === "manager" || consultant.role === "admin";
   const [engagements, clients, services, consultants] = await Promise.all([
     listEngagements(),
-    listClients(),
+    listActiveClients(),
     listServices(),
     isManagerOrAdmin ? listActiveConsultants() : Promise.resolve([]),
   ]);

@@ -1,6 +1,6 @@
 import { getCurrentConsultant } from "@/lib/data/consultants";
 import { listWorkJournalEntries } from "@/lib/data/work-journal";
-import { listClients } from "@/lib/data/clients";
+import { listActiveClients } from "@/lib/data/clients";
 import { listEngagements } from "@/lib/data/engagements";
 import { deleteJournalEntryAction } from "@/app/journal/actions";
 import JournalForm from "@/components/JournalForm";
@@ -13,7 +13,7 @@ export default async function JournalPage() {
 
   const [entries, clients, engagements] = await Promise.all([
     listWorkJournalEntries(consultant.id),
-    listClients(),
+    listActiveClients(),
     listEngagements(),
   ]);
 

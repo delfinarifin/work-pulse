@@ -67,6 +67,18 @@ Every returned id is validated against the client/service/task list actually sen
 before being trusted — an id the model hallucinates outside that list is discarded, never
 silently attached to a session.
 
+**Client archiving + AI client creation (0015):** `clients.active` (default true) — same
+deactivate-not-delete reasoning as `consultants.active` (0013), since a client is referenced by
+engagements/sessions/entries/billing_rates/mappings/journal entries with no cascade. Archived
+clients are excluded from every picker (Log Activity, Engagements, Billing Rates, Work Journal)
+and from both client-matching layers (`window_title`, `ai_metadata`), but historical rows that
+already reference them are untouched. Per explicit request, the AI layer can also now propose a
+brand-new client (`client_new_name`) when the metadata clearly names a specific real client not
+already in the list — created outright, same "no review gate" policy as services/tasks, though
+the prompt is deliberately more conservative here (only a genuinely specific proper name, never
+a guess from vague metadata) since a bogus client ties into real billing/profitability data in
+a way a bogus task label doesn't.
+
 **Two more deterministic additions (0014), independent of the AI layer — work with or without
 `ANTHROPIC_API_KEY` configured:**
 - **Fallback default classification.** If neither service nor task resolved from any layer

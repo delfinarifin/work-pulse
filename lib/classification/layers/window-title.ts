@@ -16,7 +16,8 @@ export async function matchWindowTitle(
 
   const { data, error } = await supabase
     .from("clients")
-    .select("id, name, company_name");
+    .select("id, name, company_name")
+    .eq("active", true);
   if (error) throw error;
 
   for (const client of data ?? []) {

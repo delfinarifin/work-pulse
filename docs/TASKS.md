@@ -202,6 +202,16 @@ Two more requests, both no-migration UI/logic fixes:
   pickers. No admin gate, unlike engagements/services/tasks — matches the existing RLS, which
   was already this open.
 
+## Client Archiving + AI Client Creation (0015)
+- `clients.active` (default true) — archive/reactivate on `/clients`, same deactivate-not-delete
+  reasoning as consultants (0013). Excluded from every picker and from both client-matching
+  classification layers (`window_title`, `ai_metadata`) once archived; historical references
+  untouched.
+- AI layer (`ai-metadata.ts`) can now propose a brand-new client via `client_new_name`, created
+  outright with no review gate — same policy as services/tasks, but the prompt is more
+  conservative (only a clearly-named specific real client, never a guess) since a bogus client
+  ties into real billing/profitability data.
+
 ## Sprint 8 — Engagements
 **Goal:** The bounded client-work unit that profitability, capacity planning, and (loosely)
 recurring-work detection roll up against, instead of raw `client_id`. See

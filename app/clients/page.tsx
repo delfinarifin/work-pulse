@@ -1,5 +1,5 @@
 import { listClients } from "@/lib/data/clients";
-import { createClientAction } from "@/app/clients/actions";
+import { createClientAction, toggleClientActiveAction } from "@/app/clients/actions";
 
 export default async function ClientsPage() {
   const clients = await listClients();
@@ -50,13 +50,40 @@ export default async function ClientsPage() {
                 <tr>
                   <th className="px-4 py-2 font-medium">Name</th>
                   <th className="px-4 py-2 font-medium">Company</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {clients.map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} className={c.active ? "" : "opacity-50"}>
                     <td className="px-4 py-2.5 font-medium">{c.name}</td>
                     <td className="px-4 py-2.5 text-neutral-600">{c.company_name ?? "—"}</td>
+                    <td className="px-4 py-2.5">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                          c.active ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-500"
+                        }`}
+                      >
+                        {c.active ? "Active" : "Archived"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <form action={toggleClientActiveAction}>
+                        <input type="hidden" name="id" value={c.id} />
+                        <input type="hidden" name="active" value={(!c.active).toString()} />
+                        <button
+                          type="submit"
+                          className={`rounded border px-2 py-1 text-xs font-medium ${
+                            c.active
+                              ? "border-red-300 text-red-600 hover:bg-red-50"
+                              : "border-green-300 text-green-700 hover:bg-green-50"
+                          }`}
+                        >
+                          {c.active ? "Archive" : "Reactivate"}
+                        </button>
+                      </form>
+                    </td>
                   </tr>
                 ))}
               </tbody>

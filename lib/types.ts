@@ -14,6 +14,7 @@ export type Client = {
   id: string;
   name: string;
   company_name: string | null;
+  active: boolean;
   created_at: string;
 };
 

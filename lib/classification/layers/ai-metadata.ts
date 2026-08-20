@@ -17,6 +17,7 @@ const MODEL = "claude-opus-5";
 
 const ResultSchema = z.object({
   client_id: z.string().nullable(),
+  client_new_name: z.string().nullable(),
   service_id: z.string().nullable(),
   service_new_name: z.string().nullable(),
   task_id: z.string().nullable(),
@@ -35,7 +36,7 @@ export async function matchAiMetadata(
   if (!input.fileName && !input.windowTitle && !input.applicationName) return null;
 
   const [clientsRes, servicesRes, tasksRes] = await Promise.all([
-    supabase.from("clients").select("id, name").limit(300),
+    supabase.from("clients").select("id, name").eq("active", true).limit(300),
     supabase.from("services").select("id, name"),
     supabase.from("tasks").select("id, name"),
   ]);
@@ -56,9 +57,13 @@ export async function matchAiMetadata(
         "You classify one work session for a tax/accounting consulting firm from file/window " +
         "metadata only (never file content, which you do not have). Given the active " +
         "application name, window title, and file name/path, pick the best-matching client " +
-        "from the provided list (or null if none fits — do not guess a client that isn't " +
-        "listed; plenty of real work has no client at all, e.g. internal admin, breaks, " +
-        "personal browsing, HR/IT tasks). For service and task, pick the best-matching " +
+        "from the provided list (or null if none fits — plenty of real work has no client at " +
+        "all, e.g. internal admin, breaks, personal browsing, HR/IT tasks; do not force a " +
+        "client onto that kind of work). If the metadata clearly names a specific real client " +
+        "or company that ISN'T in the list — a real proper name, not a generic app/document " +
+        "title — propose it via client_new_name (leave client_id null in that case); only do " +
+        "this when the name is genuinely specific and confident, never guess a plausible-" +
+        "sounding client from vague metadata. For service and task, pick the best-matching " +
         "existing one from the provided lists; if the work genuinely doesn't fit any existing " +
         "service or task, propose a short, specific new name via " +
         "service_new_name/task_new_name instead of forcing a poor-fit match (leave the " +
@@ -97,9 +102,23 @@ export async function matchAiMetadata(
   // Never trust an id the model returned that wasn't actually in the list
   // we gave it — a hallucinated id would otherwise silently attach the
   // session to the wrong client/service/task.
-  const clientId = parsed.client_id && clientIds.has(parsed.client_id) ? parsed.client_id : null;
+  let clientId = parsed.client_id && clientIds.has(parsed.client_id) ? parsed.client_id : null;
   let serviceId = parsed.service_id && serviceIds.has(parsed.service_id) ? parsed.service_id : null;
   let taskId = parsed.task_id && taskIds.has(parsed.task_id) ? parsed.task_id : null;
+
+  // Unlike services/tasks (pure taxonomy labels), a new client ties into
+  // real billing/profitability data — created only when the model named a
+  // specific real client (per the prompt), still an explicit product
+  // decision to allow at all, not a default. New rows are always active.
+  if (!clientId && parsed.client_new_name?.trim()) {
+    const service = createServiceClient();
+    const { data } = await service
+      .from("clients")
+      .insert({ name: parsed.client_new_name.trim(), active: true })
+      .select("id")
+      .single();
+    clientId = data?.id ?? null;
+  }
 
   // The taxonomy is allowed to grow from AI guesses (explicit product
   // decision) — a brand-new service/task the model proposes gets created

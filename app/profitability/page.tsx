@@ -1,7 +1,7 @@
 import { getCurrentConsultant, listActiveConsultants } from "@/lib/data/consultants";
 import { listBillingRates } from "@/lib/data/billing-rates";
 import { listTimesheetEntries } from "@/lib/data/timesheets";
-import { listClients } from "@/lib/data/clients";
+import { listActiveClients } from "@/lib/data/clients";
 import { listEngagements } from "@/lib/data/engagements";
 import { listServices } from "@/lib/data/services";
 import { computeProfitability } from "@/lib/logic/profitability";
@@ -24,7 +24,7 @@ export default async function ProfitabilityPage() {
     listTimesheetEntries(),
     listBillingRates(),
     listActiveConsultants(),
-    listClients(),
+    listActiveClients(),
     listEngagements(),
     listServices(),
   ]);

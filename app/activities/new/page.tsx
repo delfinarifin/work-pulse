@@ -1,12 +1,12 @@
 import ActivityForm from "@/components/ActivityForm";
-import { listClients } from "@/lib/data/clients";
+import { listActiveClients } from "@/lib/data/clients";
 import { listServices } from "@/lib/data/services";
 import { listTasks } from "@/lib/data/tasks";
 import { listEngagements } from "@/lib/data/engagements";
 
 export default async function NewActivityPage() {
   const [clients, services, tasks, engagements] = await Promise.all([
-    listClients(),
+    listActiveClients(),
     listServices(),
     listTasks(),
     listEngagements(),
