@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { BillingRateWithJoins, RateType } from "@/lib/types";
+import type { BillingRateWithJoins, Currency, RateType } from "@/lib/types";
 import { writeAuditLog } from "@/lib/data/audit-logs";
 
 const RATE_SELECT =
@@ -26,6 +26,7 @@ export type NewBillingRate = {
   service_id: string | null;
   rate_type: RateType;
   amount_per_hour: number;
+  currency: Currency;
   effective_from: string;
   effective_to: string | null;
 };
@@ -49,7 +50,12 @@ export async function createBillingRate(rate: NewBillingRate): Promise<BillingRa
     action: "billing_rate.create",
     entity: "billing_rates",
     entity_id: created.id,
-    details: { consultant_id: created.consultant_id, rate_type: created.rate_type, amount_per_hour: created.amount_per_hour },
+    details: {
+      consultant_id: created.consultant_id,
+      rate_type: created.rate_type,
+      amount_per_hour: created.amount_per_hour,
+      currency: created.currency,
+    },
   });
 
   return created;

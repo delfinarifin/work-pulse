@@ -52,12 +52,19 @@ export default function BillingRateForm({
           <input id="amount_per_hour" name="amount_per_hour" type="number" min="0" step="0.01" required className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm" />
         </div>
         <div className="space-y-1">
-          <label htmlFor="effective_from" className="text-sm font-medium">Effective from</label>
-          <input id="effective_from" name="effective_from" type="date" required defaultValue={todayISO()} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm" />
+          <label htmlFor="currency" className="text-sm font-medium">Currency</label>
+          <select id="currency" name="currency" defaultValue="IDR" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
+            <option value="IDR">IDR</option>
+            <option value="USD">USD</option>
+          </select>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="space-y-1">
+          <label htmlFor="effective_from" className="text-sm font-medium">Effective from</label>
+          <input id="effective_from" name="effective_from" type="date" required defaultValue={todayISO()} className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm" />
+        </div>
         <div className="space-y-1">
           <label htmlFor="client_id" className="text-sm font-medium">Client override (optional)</label>
           <select id="client_id" name="client_id" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">

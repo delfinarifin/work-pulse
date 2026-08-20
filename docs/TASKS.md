@@ -202,6 +202,13 @@ Two more requests, both no-migration UI/logic fixes:
   pickers. No admin gate, unlike engagements/services/tasks — matches the existing RLS, which
   was already this open.
 
+## Multi-Currency Billing Rates (0016)
+`billing_rates.currency` (IDR/USD, default IDR) — per request, a rate can be set in either
+currency, but every total on `/profitability` is reported in IDR. New `exchange_rates` table
+(USD→IDR, effective-dated, manager/admin only) converts USD rates at report time using the rate
+in effect on each entry's date. A USD rate with no covering exchange rate counts as unrated
+rather than assuming 1:1 — flagged with a banner on `/profitability` when this is the case.
+
 ## Client Archiving + AI Client Creation (0015)
 - `clients.active` (default true) — archive/reactivate on `/clients`, same deactivate-not-delete
   reasoning as consultants (0013). Excluded from every picker and from both client-matching

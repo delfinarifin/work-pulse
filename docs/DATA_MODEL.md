@@ -373,6 +373,7 @@ since cost rates in particular are sensitive.
 | client_id / engagement_id / service_id | uuid nullable (override scope) |
 | rate_type | text ('bill' / 'cost') |
 | amount_per_hour | numeric not null |
+| currency | text not null default 'IDR' ('IDR' / 'USD') |
 | effective_from | date not null |
 | effective_to | date nullable |
 | user_id | uuid nullable |
@@ -382,7 +383,25 @@ since cost rates in particular are sensitive.
 `timesheet_entries` + `billing_rates` + `engagements.budget_amount` — no new capture surface,
 purely a reporting layer on `/profitability`. An entry with no resolvable rate for its date
 still counts in `totalMinutes`/`unratedMinutes` but contributes nothing to billed/cost amounts —
-surfaced explicitly on the report rather than silently treated as $0 cost.
+surfaced explicitly on the report rather than silently treated as 0 cost.
+
+## exchange_rates
+`billing_rates.currency` can be `'IDR'` or `'USD'` (0016); every total on `/profitability` is
+reported in IDR, so a USD rate needs converting. Only USD needs a row here — IDR is trivially
+1:1 with itself. Same manager/admin-only RLS and effective-dated resolution pattern
+(`resolveExchangeRate` in `lib/logic/profitability.ts`) as `billing_rates`/
+`consultant_capacity` — an entry converts using the rate in effect on *that entry's date*, not
+today's rate. If a USD-denominated rate has no covering exchange rate for a given date, that
+entry counts as unrated (same as no billing rate at all) rather than silently assuming 1:1.
+| Field | Type |
+|-------|------|
+| id | uuid pk |
+| currency | text not null ('USD') |
+| rate_to_idr | numeric not null |
+| effective_from | date not null |
+| effective_to | date nullable |
+| user_id | uuid nullable |
+| created_at | timestamptz default now() |
 
 ## consultant_capacity / resource_allocations
 Weekly availability over time, and a manager's forward allocation plan against an engagement —

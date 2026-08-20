@@ -293,6 +293,7 @@ export type TimesheetSubmissionWithJoins = TimesheetSubmission & {
 };
 
 export type RateType = "bill" | "cost";
+export type Currency = "IDR" | "USD";
 
 export type BillingRate = {
   id: string;
@@ -302,6 +303,7 @@ export type BillingRate = {
   service_id: string | null;
   rate_type: RateType;
   amount_per_hour: number;
+  currency: Currency;
   effective_from: string;
   effective_to: string | null;
   created_at: string;
@@ -312,6 +314,16 @@ export type BillingRateWithJoins = BillingRate & {
   client: { id: string; name: string } | null;
   engagement: { id: string; name: string } | null;
   service: { id: string; name: string } | null;
+};
+
+// Only USD needs a stored rate — IDR is trivially 1:1 with itself.
+export type ExchangeRate = {
+  id: string;
+  currency: "USD";
+  rate_to_idr: number;
+  effective_from: string;
+  effective_to: string | null;
+  created_at: string;
 };
 
 export type ConsultantCapacity = {

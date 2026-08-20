@@ -1,11 +1,19 @@
 import { getCurrentConsultant, listActiveConsultants } from "@/lib/data/consultants";
 import { listBillingRates } from "@/lib/data/billing-rates";
+import { listExchangeRates } from "@/lib/data/exchange-rates";
 import { listTimesheetEntries } from "@/lib/data/timesheets";
 import { listActiveClients } from "@/lib/data/clients";
 import { listEngagements } from "@/lib/data/engagements";
 import { listServices } from "@/lib/data/services";
 import { computeProfitability } from "@/lib/logic/profitability";
 import BillingRateForm from "@/components/BillingRateForm";
+import ExchangeRateForm from "@/components/ExchangeRateForm";
+
+const idr = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+});
 
 export default async function ProfitabilityPage() {
   const consultant = await getCurrentConsultant();
@@ -20,16 +28,23 @@ export default async function ProfitabilityPage() {
     );
   }
 
-  const [entries, rates, consultants, clients, engagements, services] = await Promise.all([
-    listTimesheetEntries(),
-    listBillingRates(),
-    listActiveConsultants(),
-    listActiveClients(),
-    listEngagements(),
-    listServices(),
-  ]);
+  const [entries, rates, exchangeRates, consultants, clients, engagements, services] =
+    await Promise.all([
+      listTimesheetEntries(),
+      listBillingRates(),
+      listExchangeRates(),
+      listActiveConsultants(),
+      listActiveClients(),
+      listEngagements(),
+      listServices(),
+    ]);
 
-  const rows = computeProfitability(entries, rates);
+  const rows = computeProfitability(entries, rates, exchangeRates);
+  const usesUsdRates = rates.some((r) => r.currency === "USD");
+  const hasCurrentUsdRate = exchangeRates.some(
+    (r) => r.effective_from <= new Date().toISOString().slice(0, 10) &&
+      (!r.effective_to || r.effective_to >= new Date().toISOString().slice(0, 10)),
+  );
   const engagementById = new Map(engagements.map((e) => [e.id, e]));
 
   return (
@@ -38,7 +53,7 @@ export default async function ProfitabilityPage() {
         <h1 className="text-2xl font-bold tracking-tight">Profitability</h1>
         <p className="text-sm text-neutral-500">
           Billed value vs. cost, by engagement/client, using each consultant&apos;s resolved
-          bill/cost rate at the time the work was logged.
+          bill/cost rate at the time the work was logged. All figures reported in IDR.
         </p>
       </div>
 
@@ -46,9 +61,48 @@ export default async function ProfitabilityPage() {
         <h2 className="text-sm font-semibold text-neutral-700">Set a billing rate</h2>
         <p className="text-xs text-neutral-500">
           A rate applies to one consultant, optionally narrowed to a client/engagement/service —
-          the most specific match wins. Cost rates are never shown outside this page.
+          the most specific match wins. Rates can be set in IDR or USD; the report below always
+          converts to IDR. Cost rates are never shown outside this page.
         </p>
         <BillingRateForm consultants={consultants} clients={clients} engagements={engagements} services={services} />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-neutral-700">USD → IDR exchange rate</h2>
+        <p className="text-xs text-neutral-500">
+          Needed to convert any USD-denominated rate to the IDR totals below. Effective-dated —
+          an entry converts using the rate that was in effect on that entry&apos;s date, not
+          today&apos;s rate.
+        </p>
+        {usesUsdRates && !hasCurrentUsdRate && (
+          <p className="rounded-md bg-amber-50 border border-amber-200 text-amber-800 text-sm px-3 py-2">
+            You have USD billing rates but no exchange rate covers today — those entries will show
+            as unrated until one is set.
+          </p>
+        )}
+        <ExchangeRateForm />
+        {exchangeRates.length > 0 && (
+          <div className="overflow-x-auto rounded-lg border border-neutral-200 max-w-md">
+            <table className="w-full text-sm">
+              <thead className="bg-neutral-50 text-left text-neutral-500">
+                <tr>
+                  <th className="px-3 py-2 font-medium">1 USD =</th>
+                  <th className="px-3 py-2 font-medium">From</th>
+                  <th className="px-3 py-2 font-medium">To</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {exchangeRates.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-3 py-1.5 text-neutral-700">{idr.format(r.rate_to_idr)}</td>
+                    <td className="px-3 py-1.5 text-neutral-600">{r.effective_from}</td>
+                    <td className="px-3 py-1.5 text-neutral-600">{r.effective_to ?? "ongoing"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="space-y-3">
@@ -87,10 +141,10 @@ export default async function ProfitabilityPage() {
                       <td className="px-4 py-2.5 text-neutral-600">
                         {Math.round((row.totalMinutes / 60) * 10) / 10}h
                       </td>
-                      <td className="px-4 py-2.5 text-neutral-600">${row.billedAmount.toFixed(2)}</td>
-                      <td className="px-4 py-2.5 text-neutral-600">${row.costAmount.toFixed(2)}</td>
+                      <td className="px-4 py-2.5 text-neutral-600">{idr.format(row.billedAmount)}</td>
+                      <td className="px-4 py-2.5 text-neutral-600">{idr.format(row.costAmount)}</td>
                       <td className={`px-4 py-2.5 font-medium ${margin < 0 ? "text-red-600" : "text-green-700"}`}>
-                        ${margin.toFixed(2)}
+                        {idr.format(margin)}
                       </td>
                       <td className="px-4 py-2.5 text-neutral-600">{realization}</td>
                       <td className="px-4 py-2.5 text-neutral-400">

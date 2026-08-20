@@ -1,4 +1,10 @@
-import type { BillableStatus, BillingRate, RateType, TimesheetEntryWithJoins } from "@/lib/types";
+import type {
+  BillableStatus,
+  BillingRate,
+  ExchangeRate,
+  RateType,
+  TimesheetEntryWithJoins,
+} from "@/lib/types";
 
 // Most-specific-wins, same resolution pattern as billable_task_rules:
 // among rates matching this entry's consultant/date, the one that also
@@ -40,6 +46,38 @@ export function resolveRate(
   return candidates[0];
 }
 
+// Effective-dated, same "most recent still-active row wins" pattern as
+// resolveWeeklyCapacity — an old entry converts using the rate that was
+// actually in effect then, not today's rate.
+export function resolveExchangeRate(
+  exchangeRates: ExchangeRate[],
+  date: string,
+): number | null {
+  const candidates = exchangeRates.filter(
+    (r) => r.effective_from <= date && (!r.effective_to || r.effective_to >= date),
+  );
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.effective_from.localeCompare(a.effective_from));
+  return candidates[0].rate_to_idr;
+}
+
+// Every total on /profitability is reported in IDR. A rate already in IDR
+// converts trivially; a USD rate needs a resolvable exchange rate for that
+// date — if none exists, this returns null rather than silently assuming
+// 1:1, and the caller counts those minutes as unrated (same as no rate at
+// all) rather than reporting a wrong number.
+function toIdr(
+  rate: BillingRate,
+  hours: number,
+  exchangeRates: ExchangeRate[],
+  date: string,
+): number | null {
+  if (rate.currency === "IDR") return hours * rate.amount_per_hour;
+  const rateToIdr = resolveExchangeRate(exchangeRates, date);
+  if (rateToIdr === null) return null;
+  return hours * rate.amount_per_hour * rateToIdr;
+}
+
 export type ProfitabilityRow = {
   key: string;
   engagementId: string | null;
@@ -61,6 +99,7 @@ const BILLABLE_STATUSES: BillableStatus[] = ["billable"];
 export function computeProfitability(
   entries: TimesheetEntryWithJoins[],
   rates: BillingRate[],
+  exchangeRates: ExchangeRate[] = [],
 ): ProfitabilityRow[] {
   const rows = new Map<string, ProfitabilityRow>();
 
@@ -97,8 +136,9 @@ export function computeProfitability(
       },
       "cost",
     );
-    if (costRate) {
-      row.costAmount += hours * costRate.amount_per_hour;
+    const costIdr = costRate ? toIdr(costRate, hours, exchangeRates, entry.date) : null;
+    if (costIdr !== null) {
+      row.costAmount += costIdr;
     } else {
       row.unratedMinutes += entry.duration_minutes;
     }
@@ -116,8 +156,9 @@ export function computeProfitability(
         },
         "bill",
       );
-      if (billRate) {
-        row.billedAmount += hours * billRate.amount_per_hour;
+      const billedIdr = billRate ? toIdr(billRate, hours, exchangeRates, entry.date) : null;
+      if (billedIdr !== null) {
+        row.billedAmount += billedIdr;
       }
     }
   }
