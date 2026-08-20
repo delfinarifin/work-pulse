@@ -48,7 +48,7 @@ export default function ReportFiltersForm({
           <option value="">All consultants</option>
           {consultants.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {c.name} ({c.email})
             </option>
           ))}
         </select>

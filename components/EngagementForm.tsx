@@ -76,7 +76,7 @@ export default function EngagementForm({
           <select id="engagement_partner_id" name="engagement_partner_id" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
             <option value="">Not set</option>
             {consultants.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
             ))}
           </select>
         </div>
@@ -85,7 +85,7 @@ export default function EngagementForm({
           <select id="manager_id" name="manager_id" className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
             <option value="">Not set</option>
             {consultants.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
             ))}
           </select>
         </div>

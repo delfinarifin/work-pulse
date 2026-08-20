@@ -26,7 +26,7 @@ export function CapacityForm({ consultants }: { consultants: Consultant[] }) {
           <select id="cap_consultant_id" name="consultant_id" required className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
             <option value="">Select</option>
             {consultants.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
             ))}
           </select>
         </div>
@@ -74,7 +74,7 @@ export function AllocationForm({
           <select id="alloc_consultant_id" name="consultant_id" required className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm">
             <option value="">Select</option>
             {consultants.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>{c.name} ({c.email})</option>
             ))}
           </select>
         </div>
