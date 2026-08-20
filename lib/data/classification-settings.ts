@@ -5,6 +5,7 @@ const DEFAULTS = {
   idle_threshold_minutes: 5,
   confidence_auto_accept_threshold: 0.75,
   confidence_confirm_threshold: 0.4,
+  minimum_countable_minutes: 5,
 };
 
 // Lazily created on first access, same pattern as getCurrentConsultant().
@@ -39,6 +40,7 @@ export async function updateClassificationSettings(
     idle_threshold_minutes: number;
     confidence_auto_accept_threshold: number;
     confidence_confirm_threshold: number;
+    minimum_countable_minutes: number;
   }>,
 ): Promise<void> {
   const supabase = await createClient();

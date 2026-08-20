@@ -7,7 +7,8 @@ export type ClassificationLayer =
   | "filename_client_code"
   | "window_title"
   | "ai_metadata"
-  | "keyword_mapping";
+  | "keyword_mapping"
+  | "fallback_default";
 
 export type LayerResult = {
   layer: ClassificationLayer;

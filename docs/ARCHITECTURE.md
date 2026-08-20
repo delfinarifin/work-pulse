@@ -67,6 +67,20 @@ Every returned id is validated against the client/service/task list actually sen
 before being trusted — an id the model hallucinates outside that list is discarded, never
 silently attached to a session.
 
+**Two more deterministic additions (0014), independent of the AI layer — work with or without
+`ANTHROPIC_API_KEY` configured:**
+- **Fallback default classification.** If neither service nor task resolved from any layer
+  (deterministic or AI), `classifySession` falls back to the seeded "Other" service /
+  "Administration" task rather than leaving the session permanently unclassified —
+  `billable_status` defaults to `administration`. The migration guarantees "Other" has a
+  `default_work_type_id` set (creates a new "Administrative" work_type if needed), since
+  `timesheet_entries.work_type_id` is `NOT NULL` and a fallback classification with no
+  work_type would silently still be excluded from aggregation.
+- **Minimum countable minutes.** New `classification_settings.minimum_countable_minutes`
+  (default 5) — a session shorter than this doesn't roll into a timesheet entry.
+  `aggregateActivitySessions` filters it out before grouping; the session row itself is
+  untouched and still visible on the Activity Log for audit purposes.
+
 ## Repo Structure
 ```
 app/

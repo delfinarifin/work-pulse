@@ -74,6 +74,31 @@ export async function classifySession(
     }
   }
 
+  // Deterministic catch-all — works even with no AI key configured. Every
+  // session gets *something* rather than staying permanently
+  // unclassified: falls back to the seeded "Administration" task /
+  // "Other" service, not left blank. Only kicks in when NEITHER service
+  // nor task resolved from any layer above (a partial match, e.g. task
+  // but no service, is left alone — that's a real gap the consultant
+  // should fill via Change, not paper over).
+  let fallbackBillableStatus: BillableStatus | null = null;
+  if (!serviceResult && !taskResult) {
+    const fallback = await getFallbackServiceTask(supabase);
+    if (fallback) {
+      fallbackBillableStatus = "administration";
+      const fallbackLayer: LayerResult = {
+        layer: "fallback_default",
+        serviceId: fallback.serviceId,
+        taskId: fallback.taskId,
+        billableStatus: fallbackBillableStatus,
+        confidence: NO_MATCH_CONFIDENCE,
+      };
+      serviceResult = fallback.serviceId ? fallbackLayer : serviceResult;
+      taskResult = fallback.taskId ? fallbackLayer : taskResult;
+      if (fallback.serviceId || fallback.taskId) trail.push(fallbackLayer);
+    }
+  }
+
   const clientId = clientResult?.clientId ?? null;
   const serviceId = serviceResult?.serviceId ?? null;
   const taskId = taskResult?.taskId ?? null;
@@ -88,6 +113,7 @@ export async function classifySession(
     taskId,
     clientId,
     aiResult,
+    fallbackBillableStatus,
   );
 
   const overallConfidence = Math.min(clientConfidence, serviceConfidence, taskConfidence);
@@ -130,6 +156,7 @@ async function resolveBillableStatus(
   taskId: string | null,
   clientId: string | null,
   aiResult: LayerResult | null,
+  fallbackBillableStatus: BillableStatus | null,
 ): Promise<BillableStatus> {
   if (learned?.billableStatus) return learned.billableStatus;
 
@@ -151,5 +178,23 @@ async function resolveBillableStatus(
   // estimate is a better default than blindly assuming "billable" for
   // clearly non-client work (breaks, internal admin) it just classified.
   if (aiResult?.billableStatus) return aiResult.billableStatus;
+  if (fallbackBillableStatus) return fallbackBillableStatus;
   return "billable";
+}
+
+// The seeded "Administration" task / "Other" service — the deterministic
+// catch-all so a session never stays permanently unclassified even
+// without AI configured. Looked up by name rather than a hardcoded id
+// since these are ordinary seeded rows, not schema constants.
+async function getFallbackServiceTask(
+  supabase: SupabaseClient,
+): Promise<{ serviceId: string | null; taskId: string | null } | null> {
+  const [taskRes, serviceRes] = await Promise.all([
+    supabase.from("tasks").select("id").ilike("name", "Administration").maybeSingle(),
+    supabase.from("services").select("id").ilike("name", "Other").maybeSingle(),
+  ]);
+  const taskId = taskRes.data?.id ?? null;
+  const serviceId = serviceRes.data?.id ?? null;
+  if (!taskId && !serviceId) return null;
+  return { serviceId, taskId };
 }

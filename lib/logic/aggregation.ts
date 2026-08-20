@@ -69,6 +69,7 @@ export function aggregateActivitySessions(
   sessions: ActivitySessionWithJoins[],
   consultantId: string,
   date: string,
+  minimumCountableMinutes = 0,
 ): SessionAggregationGroup[] {
   const groups = new Map<string, SessionAggregationGroup>();
 
@@ -84,6 +85,10 @@ export function aggregateActivitySessions(
     // consultant supply a service, which re-bridges work_type_id.
     if (!session.work_type_id) continue;
     if (session.active_duration_minutes <= 0) continue;
+    // Consultant-configurable floor — a blip shorter than this doesn't
+    // roll into a timesheet entry, but the session row itself is
+    // untouched and still visible on the Activity Log.
+    if (session.active_duration_minutes < minimumCountableMinutes) continue;
 
     const key = `${session.client_id ?? "none"}:${session.engagement_id ?? "none"}:${session.service_id ?? "none"}:${session.task_id}:${session.billable_status}`;
     const existing = groups.get(key);

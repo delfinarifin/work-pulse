@@ -3,7 +3,7 @@ import type { SubmissionStatus, TimesheetSubmissionWithJoins } from "@/lib/types
 import { writeAuditLog } from "@/lib/data/audit-logs";
 
 const SUBMISSION_SELECT =
-  "*, consultant:consultants(id, name, job_role), reviewer:consultants!timesheet_submissions_reviewed_by_fkey(id, name)";
+  "*, consultant:consultants!timesheet_submissions_consultant_id_fkey(id, name, job_role), reviewer:consultants!timesheet_submissions_reviewed_by_fkey(id, name)";
 
 export async function listSubmissionsForConsultant(
   consultantId: string,

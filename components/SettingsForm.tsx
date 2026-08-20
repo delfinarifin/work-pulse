@@ -73,6 +73,25 @@ export default function SettingsForm({ settings }: { settings: ClassificationSet
         />
       </div>
 
+      <div className="space-y-1">
+        <label htmlFor="minimum_countable_minutes" className="text-sm font-medium">
+          Minimum minutes to count
+        </label>
+        <p className="text-xs text-neutral-500">
+          A session shorter than this won&apos;t roll into a timesheet entry — it still shows on
+          the Activity Log, it just isn&apos;t counted as logged time. Set to 0 to count
+          everything.
+        </p>
+        <input
+          id="minimum_countable_minutes"
+          name="minimum_countable_minutes"
+          type="number"
+          min={0}
+          defaultValue={settings.minimum_countable_minutes}
+          className="w-32 rounded-md border border-neutral-300 px-3 py-2 text-sm"
+        />
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="submit"

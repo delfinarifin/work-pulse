@@ -122,6 +122,7 @@ export type ClassificationSettings = {
   idle_threshold_minutes: number;
   confidence_auto_accept_threshold: number;
   confidence_confirm_threshold: number;
+  minimum_countable_minutes: number;
   created_at: string;
 };
 

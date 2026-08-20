@@ -116,13 +116,18 @@ export async function runSessionAggregationForConsultantDate(
     ? { id: userId ?? null }
     : { id: (await supabase.auth.getUser()).data.user?.id ?? null };
 
-  const [sessions, existingRes] = await Promise.all([
+  const [sessions, existingRes, settingsRes] = await Promise.all([
     listActivitySessionsForConsultantOnDate(consultantId, date, supabase),
     supabase
       .from("timesheet_entries")
       .select("id, client_id, engagement_id, service_id, task_id, billable_status, source, submission_id")
       .eq("consultant_id", consultantId)
       .eq("date", date),
+    supabase
+      .from("classification_settings")
+      .select("minimum_countable_minutes")
+      .eq("consultant_id", consultantId)
+      .maybeSingle(),
   ]);
 
   if (existingRes.error) throw existingRes.error;
@@ -134,7 +139,8 @@ export async function runSessionAggregationForConsultantDate(
     ]),
   );
 
-  const groups = aggregateActivitySessions(sessions, consultantId, date);
+  const minimumCountableMinutes = settingsRes.data?.minimum_countable_minutes ?? 5;
+  const groups = aggregateActivitySessions(sessions, consultantId, date, minimumCountableMinutes);
   const groupKeys = new Set(
     groups.map((g) => `${g.client_id ?? "none"}:${g.engagement_id ?? "none"}:${g.service_id ?? "none"}:${g.task_id}:${g.billable_status}`),
   );

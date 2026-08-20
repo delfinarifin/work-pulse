@@ -155,33 +155,23 @@ function RowActions({
   session: ActivitySessionWithJoins;
   onChange: () => void;
 }) {
-  if (session.review_status !== "unreviewed") {
-    return (
-      <form action={deleteSessionAction}>
-        <input type="hidden" name="id" value={session.id} />
-        <button
-          type="submit"
-          onClick={(e) => {
-            if (!window.confirm("Delete this activity?")) e.preventDefault();
-          }}
-          className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-        >
-          Delete
-        </button>
-      </form>
-    );
-  }
+  const isUnreviewed = session.review_status === "unreviewed";
   return (
     <div className="flex items-center gap-2">
-      <form action={confirmSessionAction}>
-        <input type="hidden" name="id" value={session.id} />
-        <button
-          type="submit"
-          className="rounded bg-neutral-900 text-white px-2 py-1 text-xs font-medium"
-        >
-          Confirm
-        </button>
-      </form>
+      {isUnreviewed && (
+        <form action={confirmSessionAction}>
+          <input type="hidden" name="id" value={session.id} />
+          <button
+            type="submit"
+            className="rounded bg-neutral-900 text-white px-2 py-1 text-xs font-medium"
+          >
+            Confirm
+          </button>
+        </form>
+      )}
+      {/* Always available, regardless of review_status — confirmed/
+          already-changed activity can still be wrong and needs a way
+          back in, not just a one-shot review before it locks. */}
       <button
         type="button"
         onClick={onChange}
@@ -189,15 +179,30 @@ function RowActions({
       >
         Change
       </button>
-      <form action={ignoreSessionAction}>
-        <input type="hidden" name="id" value={session.id} />
-        <button
-          type="submit"
-          className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-50"
-        >
-          Ignore
-        </button>
-      </form>
+      {isUnreviewed ? (
+        <form action={ignoreSessionAction}>
+          <input type="hidden" name="id" value={session.id} />
+          <button
+            type="submit"
+            className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-50"
+          >
+            Ignore
+          </button>
+        </form>
+      ) : (
+        <form action={deleteSessionAction}>
+          <input type="hidden" name="id" value={session.id} />
+          <button
+            type="submit"
+            onClick={(e) => {
+              if (!window.confirm("Delete this activity?")) e.preventDefault();
+            }}
+            className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+          >
+            Delete
+          </button>
+        </form>
+      )}
     </div>
   );
 }

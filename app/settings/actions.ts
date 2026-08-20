@@ -13,23 +13,31 @@ export async function updateSettingsAction(formData: FormData): Promise<void> {
   const idleThreshold = Number(formData.get("idle_threshold_minutes") ?? 5);
   const autoAccept = Number(formData.get("confidence_auto_accept_threshold") ?? 0.75);
   const confirmThreshold = Number(formData.get("confidence_confirm_threshold") ?? 0.4);
+  const minimumCountable = Number(formData.get("minimum_countable_minutes") ?? 5);
 
   if (!id) return;
   if (!Number.isFinite(idleThreshold) || idleThreshold <= 0) return;
   if (!Number.isFinite(autoAccept) || autoAccept < 0 || autoAccept > 1) return;
   if (!Number.isFinite(confirmThreshold) || confirmThreshold < 0 || confirmThreshold > 1) return;
+  if (!Number.isFinite(minimumCountable) || minimumCountable < 0) return;
 
   await updateClassificationSettings(id, {
     idle_threshold_minutes: idleThreshold,
     confidence_auto_accept_threshold: autoAccept,
     confidence_confirm_threshold: confirmThreshold,
+    minimum_countable_minutes: minimumCountable,
   });
 
   await writeAuditLog({
     action: "settings.update",
     entity: "classification_settings",
     entity_id: id,
-    details: { idle_threshold_minutes: idleThreshold, confidence_auto_accept_threshold: autoAccept, confidence_confirm_threshold: confirmThreshold },
+    details: {
+      idle_threshold_minutes: idleThreshold,
+      confidence_auto_accept_threshold: autoAccept,
+      confidence_confirm_threshold: confirmThreshold,
+      minimum_countable_minutes: minimumCountable,
+    },
   });
 
   revalidatePath("/settings");

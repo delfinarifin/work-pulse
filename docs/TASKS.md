@@ -180,6 +180,28 @@ decisions this encodes: the taxonomy grows uncontrolled from AI guesses (no revi
 non-tax-accounting work (breaks, internal admin) gets classified too rather than left blank.
 No schema change — reuses `services`/`tasks`/`activity_classifications`.
 
+Two follow-up requests, both deterministic (work without the AI key too), in `0014_minimum_countable_minutes.sql`:
+- Sessions that resolve to no service/task at all now fall back to the seeded "Other" service /
+  "Administration" task (`billable_status='administration'`) instead of staying blank —
+  migration also guarantees "Other" has a `default_work_type_id` so the fallback actually rolls
+  into a timesheet entry, not just a labeled-but-still-excluded session.
+- `classification_settings.minimum_countable_minutes` (default 5, editable on Settings) — a
+  session shorter than this doesn't count toward timesheet entries; still visible on the
+  Activity Log.
+
+Two more requests, both no-migration UI/logic fixes:
+- **Activity Log edit was a one-shot bug, not a missing feature.** `ActivityLogTable`'s
+  `RowActions` returned only a Delete button once `review_status !== "unreviewed"` — once a
+  session auto-confirmed (high confidence) or was already Changed once, there was no way back
+  in to correct it if the system (or the consultant) got it wrong. Fixed: Change is now always
+  available regardless of review_status; Confirm/Ignore stay unreviewed-only, Delete stays
+  reviewed-only.
+- **No client-management UI existed at all** — `clients` has had authenticated-write RLS since
+  Sprint 4, but nothing in the app ever called it. New `/clients` page: any consultant adds a
+  client (name + optional company name), shows up immediately in the Log Activity/Engagements
+  pickers. No admin gate, unlike engagements/services/tasks — matches the existing RLS, which
+  was already this open.
+
 ## Sprint 8 — Engagements
 **Goal:** The bounded client-work unit that profitability, capacity planning, and (loosely)
 recurring-work detection roll up against, instead of raw `client_id`. See
