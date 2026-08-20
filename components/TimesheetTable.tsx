@@ -184,12 +184,7 @@ export default function TimesheetTable({
                     >
                       Edit
                     </button>
-                    <form
-                      action={async (formData) => {
-                        if (!window.confirm("Delete this entry?")) return;
-                        await deleteEntryAction(formData);
-                      }}
-                    >
+                    <form action={deleteEntryAction}>
                       <input type="hidden" name="id" value={entry.id} />
                       <button
                         type="submit"

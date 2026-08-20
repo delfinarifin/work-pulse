@@ -168,9 +168,6 @@ function RowActions({
         <input type="hidden" name="id" value={session.id} />
         <button
           type="submit"
-          onClick={(e) => {
-            if (!window.confirm("Delete this activity?")) e.preventDefault();
-          }}
           className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
         >
           Delete
