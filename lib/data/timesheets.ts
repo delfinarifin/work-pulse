@@ -197,12 +197,16 @@ export async function runSessionAggregationForConsultantDate(
   }
 
   if (createdCount > 0) {
-    await writeAuditLog({
-      action: "entry.create",
-      entity: "timesheet_entries",
-      entity_id: null,
-      details: { consultant_id: consultantId, date, count: createdCount, source: "auto" },
-    });
+    await writeAuditLog(
+      {
+        action: "entry.create",
+        entity: "timesheet_entries",
+        entity_id: null,
+        details: { consultant_id: consultantId, date, count: createdCount, source: "auto" },
+      },
+      supabase,
+      user.id,
+    );
   }
 }
 
