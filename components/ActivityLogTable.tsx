@@ -3,9 +3,7 @@
 import { useState } from "react";
 import {
   changeSessionAction,
-  confirmSessionAction,
   deleteSessionAction,
-  ignoreSessionAction,
   mergeSessionsAction,
 } from "@/app/activities/actions";
 import type { ActivitySessionWithJoins, BillableStatus, Client, Service, Task } from "@/lib/types";
@@ -148,6 +146,8 @@ function StatusBadge({ session }: { session: ActivitySessionWithJoins }) {
   );
 }
 
+// Simplified per explicit request — no Confirm/Ignore step, just Change
+// (always available, any review_status) and Delete (always available).
 function RowActions({
   session,
   onChange,
@@ -155,23 +155,8 @@ function RowActions({
   session: ActivitySessionWithJoins;
   onChange: () => void;
 }) {
-  const isUnreviewed = session.review_status === "unreviewed";
   return (
     <div className="flex items-center gap-2">
-      {isUnreviewed && (
-        <form action={confirmSessionAction}>
-          <input type="hidden" name="id" value={session.id} />
-          <button
-            type="submit"
-            className="rounded bg-neutral-900 text-white px-2 py-1 text-xs font-medium"
-          >
-            Confirm
-          </button>
-        </form>
-      )}
-      {/* Always available, regardless of review_status — confirmed/
-          already-changed activity can still be wrong and needs a way
-          back in, not just a one-shot review before it locks. */}
       <button
         type="button"
         onClick={onChange}
@@ -179,30 +164,18 @@ function RowActions({
       >
         Change
       </button>
-      {isUnreviewed ? (
-        <form action={ignoreSessionAction}>
-          <input type="hidden" name="id" value={session.id} />
-          <button
-            type="submit"
-            className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-neutral-500 hover:bg-neutral-50"
-          >
-            Ignore
-          </button>
-        </form>
-      ) : (
-        <form action={deleteSessionAction}>
-          <input type="hidden" name="id" value={session.id} />
-          <button
-            type="submit"
-            onClick={(e) => {
-              if (!window.confirm("Delete this activity?")) e.preventDefault();
-            }}
-            className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </form>
-      )}
+      <form action={deleteSessionAction}>
+        <input type="hidden" name="id" value={session.id} />
+        <button
+          type="submit"
+          onClick={(e) => {
+            if (!window.confirm("Delete this activity?")) e.preventDefault();
+          }}
+          className="rounded border border-neutral-300 px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+        >
+          Delete
+        </button>
+      </form>
     </div>
   );
 }

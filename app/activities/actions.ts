@@ -16,52 +16,6 @@ function revalidateAll() {
   revalidatePath("/reports");
 }
 
-export async function confirmSessionAction(formData: FormData): Promise<void> {
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-
-  const session = await getActivitySession(id);
-  if (!session) return;
-
-  await updateActivitySession(id, { review_status: "confirmed" });
-  await writeAuditLog({
-    action: "session.confirm",
-    entity: "activity_sessions",
-    entity_id: id,
-    details: { client_id: session.client_id, service_id: session.service_id, task_id: session.task_id },
-  });
-  await runSessionAggregationForConsultantDate(
-    session.consultant_id,
-    session.started_at.slice(0, 10),
-  );
-  revalidateAll();
-}
-
-export async function ignoreSessionAction(formData: FormData): Promise<void> {
-  const id = String(formData.get("id") ?? "");
-  if (!id) return;
-
-  const session = await getActivitySession(id);
-  if (!session) return;
-
-  await updateActivitySession(id, { review_status: "ignored" });
-  await writeAuditLog({
-    action: "session.ignore",
-    entity: "activity_sessions",
-    entity_id: id,
-    details: {},
-  });
-  // Re-run aggregation so an already-aggregated ignored session's minutes
-  // don't linger in a stale auto timesheet entry — the group simply
-  // disappears next time this date is aggregated, but the entry itself is
-  // only touched by future aggregation runs, so remove it explicitly here.
-  await runSessionAggregationForConsultantDate(
-    session.consultant_id,
-    session.started_at.slice(0, 10),
-  );
-  revalidateAll();
-}
-
 const BILLABLE_STATUSES: BillableStatus[] = [
   "billable",
   "non_billable",
